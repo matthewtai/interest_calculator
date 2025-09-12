@@ -320,7 +320,6 @@
         }
 
         function calculateGracePeriod() {
-            console.log('calculateGracePeriod called');
             const rate = parseFloat(document.getElementById('rate1').value) / 100;
             const issueDateStr = document.getElementById('issueDate1').value;
             const dueDateStr = document.getElementById('dueDate1').value;
@@ -331,8 +330,6 @@
             const periods = parseInt(document.getElementById('periods1').value);
             const interestType = document.querySelector('input[name="interestType"]:checked').value;
             const payments = getPayments();
-            
-            console.log('Values:', {rate, issueDateStr, dueDateStr, interval, principal, periods, interestType});
             
             // Check for required fields more carefully
             if (!rate || rate <= 0 || !principal || principal <= 0 || !interval || interval <= 0 || !issueDateStr || !dueDateStr || !periods || periods < 1) {
@@ -362,7 +359,7 @@
             let firstInterestDate;
             
             if (gracePeriodDays === 0) {
-                // No grace period: first interest occurs after the first interval + 1 day
+                // No grace period: first interest occurs after the first interval
                 firstInterestDate = addDays(issueDate, interval + 1);
             } else {
                 // Grace period exists: first interest occurs one day after due date
@@ -415,8 +412,8 @@
                         const gracePeriodDays = calculateDaysBetween(issueDate, dueDate);
                         
                         if (gracePeriodDays === 0) {
-                            // No grace period: first interest accrues for the full interval
-                            accrualDays = interval;
+                            // No grace period: interest accrues for the interval period + 1 day
+                            accrualDays = interval + 1;
                         } else {
                             // Grace period exists: first interest accrues from issue date to due date
                             accrualDays = gracePeriodDays;
