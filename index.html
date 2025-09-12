@@ -440,7 +440,7 @@
                         calculation: `$${principalUsed.toFixed(2)} × ${rate.toFixed(6)} × ${(accrualDays/365).toFixed(6)}`,
                         result: interestAmount,
                         explanation: event.period === 1 ? 
-                            `${gracePeriodDays === 0 ? 'No grace period - interest accrues immediately from Issue Date for the full interval period.' : 'Interest accrues from Issue Date to Due Date (grace period).'} ${interestType === 'simple' ? 'Since this is simple interest, we use the current principal (reduced by any payments)' : 'For compound interest, we use the current balance'} of $${principalUsed.toFixed(2)}.` :
+                            `${gracePeriodDays === 0 ? `No grace period - interest accrues for ${accrualDays} days from Issue Date.` : `Interest accrues from Issue Date to Due Date (${accrualDays}-day grace period).`} ${interestType === 'simple' ? 'Since this is simple interest, we use the current principal (reduced by any payments)' : 'For compound interest, we use the current balance'} of $${principalUsed.toFixed(2)}.` :
                             `This is the ${event.periodName.toLowerCase()} period (${accrualDays} days). ${interestType === 'simple' ? 'Since this is simple interest, we use the current principal (reduced by any payments)' : 'For compound interest, we use the current balance'} of $${principalUsed.toFixed(2)}${interestType === 'compound' ? ', which includes all previous interest' : ', which may have been reduced by payments'}.`
                     };
                     
