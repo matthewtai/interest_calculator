@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compound & Simple Interest Calculator with Grace Period</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .scenario {
+            margin-bottom: 40px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .scenario h2 {
+            background: #4CAF50;
+            color: white;
+            padding: 10px;
+            margin: -20px -20px 20px -20px;
+            border-radius: 6px 6px 0 0;
+        }
+        
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        
+        input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        
+        button:hover {
+            background: #45a049;
+        }
+        
+        .results {
+            margin-top: 20px;
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        
+        .results-table th,
+        .results-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        .results-table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        
+        .results-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .total-row {
+            font-weight: bold;
+            background-color: #e8f5e8 !important;
+        }
+        
+        /* Tooltip styles */
+        .tooltip-container {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+        }
+        
+        .tooltip {
+            visibility: hidden;
+            width: 400px;
+            background-color: #333;
+            color: white;
+            text-align: left;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 1000;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -200px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 12px;
+            line-height: 1.4;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        .tooltip::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #333 transparent transparent transparent;
+        }
+        
+        .tooltip-container:hover .tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .calculation-step {
+            margin: 5px 0;
+            padding: 3px 0;
+        }
+        
+        .calculation-formula {
+            font-family: monospace;
+            background-color: #444;
+            padding: 2px 4px;
+            border-radius: 3px;
+            margin: 2px 0;
+        }
+        
+        .tooltip-icon {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            background-color: #007bff;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 16px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 5px;
+            cursor: help;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Compound & Simple Interest Calculator with Grace Period</h1>
+        
+        <!-- Scenario 1: With Grace Period -->
+        <div class="scenario">
+            <h2>Interest Calculator</h2>
+            
+            <!-- Interest Type Toggle -->
+            <div style="margin-bottom: 20px; padding: 15px; background-color: #f0f8ff; border-radius: 5px;">
+                <label style="font-weight: bold; margin-bottom: 10px; display: block;">Interest Type:</label>
+                <div style="display: flex; gap: 20px;">
+                    <label style="font-weight: normal; display: flex; align-items: center; gap: 5px;">
+                        <input type="radio" name="interestType" value="compound" checked>
+                        Compound Interest
+                    </label>
+                    <label style="font-weight: normal; display: flex; align-items: center; gap: 5px;">
+                        <input type="radio" name="interestType" value="simple">
+                        Simple Interest
+                    </label>
+                </div>
+            </div>
+            
+            <div class="input-grid">
+                <div class="input-group">
+                    <label for="rate1">Annual Interest Rate (%):</label>
+                    <input type="number" id="rate1" step="0.001" placeholder="5.0">
+                </div>
+                <div class="input-group">
+                    <label for="issueDate1">Issue Date:</label>
+                    <input type="date" id="issueDate1">
+                </div>
+                <div class="input-group">
+                    <label for="dueDate1">Due Date:</label>
+                    <input type="date" id="dueDate1">
+                </div>
+                <div class="input-group">
+                    <label for="interval1">Interest Interval (days):</label>
+                    <input type="number" id="interval1" placeholder="30">
+                </div>
+                <div class="input-group">
+                    <label for="principal1">Principal Amount ($):</label>
+                    <input type="number" id="principal1" step="0.01" placeholder="1000.00">
+                </div>
+            </div>
+            
+            <!-- Payments Section -->
+            <div style="margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-radius: 5px; border: 1px solid #dee2e6;">
+                <h3 style="margin-top: 0; color: #495057;">Payments (Optional)</h3>
+                <div id="payments-container">
+                    <!-- Payment rows will be added here -->
+                </div>
+                <button type="button" onclick="addPaymentRow()" style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 3px; cursor: pointer; margin-top: 10px;">Add Payment</button>
+            </div>
+            
+            
+            <!-- Results Section -->
+            <div id="results1" class="results" style="display:none;">
+                <div style="margin-bottom: 15px; padding: 10px; background-color: #f8f9fa; border-radius: 4px; border: 1px solid #dee2e6;">
+                    <label for="periods1" style="font-weight: bold; margin-right: 10px;">Display Number of Interest Charges:</label>
+                    <input type="number" id="periods1" min="1" max="50" value="5" style="width: 80px; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">
+                </div>
+                <div id="results1-content"></div>
+            </div>
+        </div>
+        
+    </div>
+
+    <script>
+        let paymentCounter = 0;
+        
+        function addPaymentRow() {
+            paymentCounter++;
+            const container = document.getElementById('payments-container');
+            const paymentRow = document.createElement('div');
+            paymentRow.id = `payment-row-${paymentCounter}`;
+            paymentRow.style.cssText = 'display: flex; gap: 10px; margin-bottom: 10px; align-items: center;';
+            
+            paymentRow.innerHTML = `
+                <div style="display: flex; flex-direction: column;">
+                    <label style="font-size: 12px; margin-bottom: 2px;">Amount ($)</label>
+                    <input type="number" id="payment-amount-${paymentCounter}" step="0.01" placeholder="0.00" style="width: 120px; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">
+                </div>
+                <div style="display: flex; flex-direction: column;">
+                    <label style="font-size: 12px; margin-bottom: 2px;">Payment Date</label>
+                    <input type="date" id="payment-date-${paymentCounter}" style="width: 140px; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">
+                </div>
+                <button type="button" onclick="removePaymentRow(${paymentCounter})" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin-top: 15px;">Remove</button>
+            `;
+            
+            container.appendChild(paymentRow);
+            
+            // Add event listeners to the new payment inputs
+            addPaymentEventListeners(paymentCounter);
+        }
+        
+        function removePaymentRow(id) {
+            const row = document.getElementById(`payment-row-${id}`);
+            if (row) {
+                row.remove();
+                // Recalculate after removing payment
+                calculateGracePeriod();
+            }
+        }
+        
+        function getPayments() {
+            const payments = [];
+            const container = document.getElementById('payments-container');
+            const paymentRows = container.children;
+            
+            for (let i = 0; i < paymentRows.length; i++) {
+                const row = paymentRows[i];
+                const id = row.id.split('-')[2];
+                const amountInput = document.getElementById(`payment-amount-${id}`);
+                const dateInput = document.getElementById(`payment-date-${id}`);
+                
+                if (amountInput && dateInput && amountInput.value && dateInput.value) {
+                    const amount = parseFloat(amountInput.value);
+                    const date = new Date(dateInput.value + 'T00:00:00');
+                    
+                    if (amount > 0 && !isNaN(date.getTime())) {
+                        payments.push({ amount, date, id });
+                    }
+                }
+            }
+            
+            // Sort payments by date
+            return payments.sort((a, b) => a.date - b.date);
+        }
+
+        function calculateGracePeriod() {
+            console.log('calculateGracePeriod called');
+            const rate = parseFloat(document.getElementById('rate1').value) / 100;
+            const issueDateStr = document.getElementById('issueDate1').value;
+            const dueDateStr = document.getElementById('dueDate1').value;
+            const issueDate = new Date(issueDateStr + 'T00:00:00');
+            const dueDate = new Date(dueDateStr + 'T00:00:00');
+            const interval = parseInt(document.getElementById('interval1').value);
+            const principal = parseFloat(document.getElementById('principal1').value);
+            const periods = parseInt(document.getElementById('periods1').value);
+            const interestType = document.querySelector('input[name="interestType"]:checked').value;
+            const payments = getPayments();
+            
+            console.log('Values:', {rate, issueDateStr, dueDateStr, interval, principal, periods, interestType});
+            
+            // Check for required fields more carefully
+            if (!rate || rate <= 0 || !principal || principal <= 0 || !interval || interval <= 0 || !issueDateStr || !dueDateStr || !periods || periods < 1) {
+                // Hide results if required fields are not filled
+                document.getElementById('results1').style.display = 'none';
+                return;
+            }
+            
+            // Check if dates are valid
+            if (isNaN(issueDate.getTime()) || isNaN(dueDate.getTime())) {
+                document.getElementById('results1').style.display = 'none';
+                return;
+            }
+            
+            const daysBetween = Math.ceil((dueDate - issueDate) / (1000 * 60 * 60 * 24));
+            
+            let results = [];
+            let runningTotal = principal;
+            let originalPrincipal = principal;
+            let currentPrincipal = principal; // For simple interest, this gets reduced by payments
+            
+            // Create timeline of events (interest charges and payments)
+            let timeline = [];
+            
+            // Add first interest charge
+            const gracePeriodDays = calculateDaysBetween(issueDate, dueDate);
+            let firstInterestDate;
+            
+            if (gracePeriodDays === 0) {
+                // No grace period: first interest occurs after the first interval + 1 day
+                firstInterestDate = addDays(issueDate, interval + 1);
+            } else {
+                // Grace period exists: first interest occurs one day after due date
+                firstInterestDate = addDays(dueDate, 1);
+            }
+            
+            timeline.push({
+                type: 'interest',
+                date: firstInterestDate,
+                period: 1,
+                periodName: '1st Interest'
+            });
+            
+            // Add subsequent interest charges
+            let currentDate = new Date(firstInterestDate);
+            for (let i = 2; i <= periods; i++) {
+                currentDate = addDays(currentDate, interval);
+                timeline.push({
+                    type: 'interest',
+                    date: new Date(currentDate),
+                    period: i,
+                    periodName: `${getOrdinal(i)} Interest`
+                });
+            }
+            
+            // Add payments to timeline
+            payments.forEach(payment => {
+                timeline.push({
+                    type: 'payment',
+                    date: payment.date,
+                    amount: payment.amount,
+                    id: payment.id
+                });
+            });
+            
+            // Sort timeline by date
+            timeline.sort((a, b) => a.date - b.date);
+            
+            // Process timeline events
+            let lastEventDate = issueDate;
+            
+            timeline.forEach(event => {
+                if (event.type === 'interest') {
+                    // Calculate interest for this period
+                    let accrualStartDate, accrualDays;
+                    
+                    if (event.period === 1) {
+                        // First interest: check if there's a grace period
+                        accrualStartDate = issueDate;
+                        const gracePeriodDays = calculateDaysBetween(issueDate, dueDate);
+                        
+                        if (gracePeriodDays === 0) {
+                            // No grace period: first interest accrues for the full interval
+                            accrualDays = interval;
+                        } else {
+                            // Grace period exists: first interest accrues from issue date to due date
+                            accrualDays = gracePeriodDays;
+                        }
+                    } else {
+                        // Subsequent interests: accrue from last event
+                        accrualStartDate = lastEventDate;
+                        accrualDays = interval;
+                    }
+                    
+                    let interestAmount;
+                    let calculationDetails;
+                    let principalUsed = (interestType === 'simple') ? currentPrincipal : runningTotal;
+                    
+                    interestAmount = principalUsed * rate * (accrualDays / 365);
+                    
+                    calculationDetails = {
+                        type: interestType === 'simple' ? 'Simple Interest' : 'Compound Interest',
+                        principalUsed: principalUsed,
+                        rate: rate,
+                        days: accrualDays,
+                        totalDays: 365,
+                        formula: `$${principalUsed.toFixed(2)} × ${(rate * 100).toFixed(3)}% × (${accrualDays}/365)`,
+                        calculation: `$${principalUsed.toFixed(2)} × ${rate.toFixed(6)} × ${(accrualDays/365).toFixed(6)}`,
+                        result: interestAmount,
+                        explanation: event.period === 1 ? 
+                            `${gracePeriodDays === 0 ? 'No grace period - interest accrues immediately from Issue Date for the full interval period.' : 'Interest accrues from Issue Date to Due Date (grace period).'} ${interestType === 'simple' ? 'Since this is simple interest, we use the current principal (reduced by any payments)' : 'For compound interest, we use the current balance'} of $${principalUsed.toFixed(2)}.` :
+                            `This is the ${event.periodName.toLowerCase()} period (${accrualDays} days). ${interestType === 'simple' ? 'Since this is simple interest, we use the current principal (reduced by any payments)' : 'For compound interest, we use the current balance'} of $${principalUsed.toFixed(2)}${interestType === 'compound' ? ', which includes all previous interest' : ', which may have been reduced by payments'}.`
+                    };
+                    
+                    results.push({
+                        type: 'interest',
+                        period: event.periodName,
+                        date: formatDate(event.date),
+                        days: accrualDays,
+                        interest: interestAmount,
+                        balance: runningTotal + interestAmount,
+                        calculationDetails: calculationDetails
+                    });
+                    
+                    runningTotal += interestAmount;
+                    
+                } else if (event.type === 'payment') {
+                    // Apply payment
+                    const paymentAmount = Math.min(event.amount, runningTotal); // Can't pay more than owed
+                    runningTotal -= paymentAmount;
+                    
+                    // For simple interest, reduce the principal used for future calculations
+                    if (interestType === 'simple') {
+                        currentPrincipal = Math.max(0, currentPrincipal - paymentAmount);
+                    }
+                    
+                    results.push({
+                        type: 'payment',
+                        period: 'Payment',
+                        date: formatDate(event.date),
+                        days: '-',
+                        interest: 0,
+                        payment: paymentAmount,
+                        balance: runningTotal,
+                        calculationDetails: {
+                            type: 'Payment Applied',
+                            explanation: `Payment of $${event.amount.toFixed(2)} applied. ${paymentAmount < event.amount ? `Only $${paymentAmount.toFixed(2)} was applied as it cannot exceed the current balance.` : ''} ${interestType === 'simple' ? `For simple interest, this reduces the principal used for future interest calculations to $${currentPrincipal.toFixed(2)}.` : ''}`,
+                            result: paymentAmount
+                        }
+                    });
+                }
+                
+                lastEventDate = new Date(event.date);
+            });
+            
+            displayResults('results1-content', results, daysBetween, originalPrincipal, interestType);
+        }
+        
+        
+        function displayResults(elementId, results, daysBetween, principal, interestType) {
+            let html = '';
+            
+            if (daysBetween > 0) {
+                html += `<p><strong>Days between Issue and Due Date:</strong> ${daysBetween}</p>`;
+            }
+            
+            if (interestType) {
+                html += `<p><strong>Interest Type:</strong> ${interestType.charAt(0).toUpperCase() + interestType.slice(1)} Interest</p>`;
+            }
+            
+            html += `
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>Period</th>
+                            <th>Date</th>
+                            <th>Days</th>
+                            <th>Interest <span class="tooltip-icon" title="Hover over interest amounts to see detailed calculations">?</span></th>
+                            <th>Running Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            let totalInterest = 0;
+            
+            results.forEach(result => {
+                if (result.type === 'interest') {
+                    totalInterest += result.interest;
+                    
+                    // Create tooltip content for interest
+                    const details = result.calculationDetails;
+                    const tooltipContent = `
+                        <div class="calculation-step"><strong>${details.type} Calculation</strong></div>
+                        <div class="calculation-step">${details.explanation}</div>
+                        <div class="calculation-step">
+                            <strong>Formula:</strong><br>
+                            <div class="calculation-formula">Principal × Rate × (Days ÷ 365)</div>
+                        </div>
+                        <div class="calculation-step">
+                            <strong>Substitution:</strong><br>
+                            <div class="calculation-formula">${details.formula}</div>
+                        </div>
+                        <div class="calculation-step">
+                            <strong>Calculation:</strong><br>
+                            <div class="calculation-formula">${details.calculation} = $${details.result.toFixed(2)}</div>
+                        </div>
+                        <div class="calculation-step">
+                            <strong>Rate Details:</strong><br>
+                            Annual rate: ${(details.rate * 100).toFixed(3)}%<br>
+                            Period: ${details.days} days out of ${details.totalDays} days<br>
+                            Daily rate: ${((details.rate / 365) * 100).toFixed(8)}%
+                        </div>
+                    `;
+                    
+                    html += `
+                        <tr>
+                            <td>${result.period}</td>
+                            <td>${result.date}</td>
+                            <td>${result.days}</td>
+                            <td>
+                                <div class="tooltip-container">
+                                    $${result.interest.toFixed(2)}
+                                    <div class="tooltip">${tooltipContent}</div>
+                                </div>
+                            </td>
+                            <td>$${result.balance.toFixed(2)}</td>
+                        </tr>
+                    `;
+                } else if (result.type === 'payment') {
+                    // Create tooltip content for payment
+                    const details = result.calculationDetails;
+                    const tooltipContent = `
+                        <div class="calculation-step"><strong>${details.type}</strong></div>
+                        <div class="calculation-step">${details.explanation}</div>
+                        <div class="calculation-step">
+                            <strong>Payment Amount:</strong> $${details.result.toFixed(2)}
+                        </div>
+                    `;
+                    
+                    html += `
+                        <tr style="background-color: #e8f5e8;">
+                            <td>${result.period}</td>
+                            <td>${result.date}</td>
+                            <td>${result.days}</td>
+                            <td>
+                                <div class="tooltip-container">
+                                    -$${result.payment.toFixed(2)}
+                                    <div class="tooltip">${tooltipContent}</div>
+                                </div>
+                            </td>
+                            <td>$${result.balance.toFixed(2)}</td>
+                        </tr>
+                    `;
+                }
+            });
+            
+            html += `
+                    <tr class="total-row">
+                        <td colspan="3"><strong>Total</strong></td>
+                        <td><strong>$${totalInterest.toFixed(2)}</strong></td>
+                        <td><strong>$${(principal + totalInterest).toFixed(2)}</strong></td>
+                    </tr>
+                    </tbody>
+                </table>
+            `;
+            
+            document.getElementById(elementId).innerHTML = html;
+            document.getElementById('results1').style.display = 'block';
+        }
+        
+        function formatDate(date) {
+            return date.toLocaleDateString('en-US', {
+                month: 'numeric',
+                day: 'numeric',
+                year: 'numeric'
+            });
+        }
+        
+        function getOrdinal(n) {
+            // Handle special cases for 11th, 12th, 13th
+            if (n >= 11 && n <= 13) {
+                return `${n}th`;
+            }
+            
+            // Handle general cases
+            const lastDigit = n % 10;
+            switch (lastDigit) {
+                case 1: return `${n}st`;
+                case 2: return `${n}nd`;
+                case 3: return `${n}rd`;
+                default: return `${n}th`;
+            }
+        }
+        
+        // Helper function to add days to a date without month boundary issues
+        function addDays(date, days) {
+            const result = new Date(date);
+            result.setDate(result.getDate() + days);
+            return result;
+        }
+        
+        // Helper function to calculate actual days between two dates
+        function calculateDaysBetween(startDate, endDate) {
+            const timeDiff = endDate.getTime() - startDate.getTime();
+            return Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+        }
+        
+        // Add event listeners for automatic calculation
+        function setupEventListeners() {
+            // Input fields that should trigger recalculation
+            const inputIds = ['rate1', 'issueDate1', 'dueDate1', 'interval1', 'principal1', 'periods1'];
+            
+            inputIds.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.addEventListener('input', calculateGracePeriod);
+                    element.addEventListener('change', calculateGracePeriod);
+                }
+            });
+            
+            // Interest type radio buttons
+            const radioButtons = document.querySelectorAll('input[name="interestType"]');
+            radioButtons.forEach(radio => {
+                radio.addEventListener('change', calculateGracePeriod);
+            });
+        }
+        
+        // Add event listeners to dynamically added payment rows
+        function addPaymentEventListeners(paymentId) {
+            const amountInput = document.getElementById(`payment-amount-${paymentId}`);
+            const dateInput = document.getElementById(`payment-date-${paymentId}`);
+            
+            if (amountInput) {
+                amountInput.addEventListener('input', calculateGracePeriod);
+                amountInput.addEventListener('change', calculateGracePeriod);
+            }
+            
+            if (dateInput) {
+                dateInput.addEventListener('input', calculateGracePeriod);
+                dateInput.addEventListener('change', calculateGracePeriod);
+            }
+        }
+
+        // Initialize with calculations on page load
+        window.onload = function() {
+            setupEventListeners();
+            calculateGracePeriod();
+        };
+    </script>
+</body>
+</html>
