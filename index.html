@@ -515,6 +515,7 @@
             `;
             
             let totalInterest = 0;
+            let finalBalance = principal; // Start with original principal
             
             results.forEach(result => {
                 if (result.type === 'interest') {
@@ -585,13 +586,20 @@
                         </tr>
                     `;
                 }
+                
+                // Always track the balance from each transaction (this will be the final balance after the last transaction)
+                finalBalance = result.balance;
             });
+            
+            // Apply proper currency truncation to totals (no rounding up)
+            const truncatedTotalInterest = Math.floor(totalInterest * 100) / 100;
+            const truncatedFinalBalance = Math.floor(finalBalance * 100) / 100;
             
             html += `
                     <tr class="total-row">
                         <td colspan="3"><strong>Total</strong></td>
-                        <td><strong>$${totalInterest.toFixed(2)}</strong></td>
-                        <td><strong>$${(principal + totalInterest).toFixed(2)}</strong></td>
+                        <td><strong>$${truncatedTotalInterest.toFixed(2)}</strong></td>
+                        <td><strong>$${truncatedFinalBalance.toFixed(2)}</strong></td>
                     </tr>
                     </tbody>
                 </table>
