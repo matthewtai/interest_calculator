@@ -191,12 +191,19 @@
 </head>
 <body>
     <div class="container">
-        <h1>Compound & Simple Interest Calculator</h1>
+        <h1>(Manage) Compound & Simple Interest Calculator</h1>
         
         <!-- Scenario 1: With Grace Period -->
         <div class="scenario">
             <h2>Interest Calculator</h2>
-            
+            <div style="margin-bottom: 20px; padding: 10px; background-color: #fffbe6; border-left: 4px solid #ffe066; border-radius: 4px;">
+                <strong>Tip:</strong>
+                To retrieve bill interest details via the API, use:<br>
+                <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px; font-size: 95%;">
+                    https://app.clio.com/api/v4/bills/<span style="color:#007bff;">{bill_id}</span>?fields=interest{rate,period}
+                </code><br><br>
+                <small>Note: The rate is in decimal form, so 0.1 is 10%</small>
+            </div>
             <!-- Interest Type Toggle -->
             <div style="margin-bottom: 20px; padding: 15px; background-color: #f0f8ff; border-radius: 5px;">
                 <label style="font-weight: bold; margin-bottom: 10px; display: block;">Interest Type:</label>
