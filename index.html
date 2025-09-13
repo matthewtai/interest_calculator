@@ -428,7 +428,9 @@
                     let calculationDetails;
                     let principalUsed = (interestType === 'simple') ? currentPrincipal : runningTotal;
                     
-                    interestAmount = principalUsed * rate * (accrualDays / 365);
+                    // Calculate interest and round to 2 decimal places
+                    const rawInterest = principalUsed * rate * (accrualDays / 365);
+                    interestAmount = Math.round(rawInterest * 100) / 100;
                     
                     calculationDetails = {
                         type: interestType === 'simple' ? 'Simple Interest' : 'Compound Interest',
@@ -591,15 +593,11 @@
                 finalBalance = result.balance;
             });
             
-            // Apply proper currency truncation to totals (no rounding up)
-            const truncatedTotalInterest = Math.floor(totalInterest * 100) / 100;
-            const truncatedFinalBalance = Math.floor(finalBalance * 100) / 100;
-            
             html += `
                     <tr class="total-row">
                         <td colspan="3"><strong>Total</strong></td>
-                        <td><strong>$${truncatedTotalInterest.toFixed(2)}</strong></td>
-                        <td><strong>$${truncatedFinalBalance.toFixed(2)}</strong></td>
+                        <td><strong>$${totalInterest.toFixed(2)}</strong></td>
+                        <td><strong>$${finalBalance.toFixed(2)}</strong></td>
                     </tr>
                     </tbody>
                 </table>
