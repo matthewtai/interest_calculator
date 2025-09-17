@@ -200,7 +200,7 @@
                 <strong>Tip:</strong>
                 To retrieve bill interest details via the API, use:<br>
                 <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px; font-size: 95%;">
-                    https://app.clio.com/api/v4/bills/<span style="color:#007bff;">{bill_id}</span>?fields=interest{rate,period,type}
+                    https://app.clio.com/api/v4/bills/<span style="color:#007bff;">{bill_id}</span>?fields=interest{rate,period}
                 </code><br><br>
                 <small>Note: The rate is in decimal form, so 0.1 is 10%</small>
             </div>
@@ -449,8 +449,10 @@
                         calculation: `$${principalUsed.toFixed(2)} × ${rate.toFixed(6)} × ${(accrualDays/365).toFixed(6)}`,
                         result: interestAmount,
                         explanation: event.period === 1 ? 
-                            `${gracePeriodDays === 0 ? `No grace period - interest accrues for ${accrualDays} days from Issue Date.` : `Interest accrues from Issue Date to Due Date (${accrualDays}-day grace period).`} ${interestType === 'simple' ? 'Since this is simple interest, we use the current principal (reduced by any payments)' : 'For compound interest, we use the current balance'} of $${principalUsed.toFixed(2)}.` :
-                            `This is the ${event.periodName.toLowerCase()} period (${accrualDays} days). ${interestType === 'simple' ? 'Since this is simple interest, we use the current principal (reduced by any payments)' : 'For compound interest, we use the current balance'} of $${principalUsed.toFixed(2)}${interestType === 'compound' ? ', which includes all previous interest' : ', which may have been reduced by payments'}.`
+                            `${gracePeriodDays === 0 
+                                ? `No grace period: First interest charge appears ${accrualDays} days after issue date (day of invoice + interest interval). Interest covers the full ${accrualDays}-day period from issue date to charge date.` 
+                                : `With Grace period: Interest accrues from issue date to due date (${gracePeriodDays} days). First charge appears one day after due date expires. Interest covers the ${accrualDays}-day grace period.`} ${interestType === 'simple' ? 'Simple interest uses the current principal' : 'Compound interest uses the current balance'} of $${principalUsed.toFixed(2)}.` :
+                            `Subsequent interest charge: This is the ${event.periodName.toLowerCase()} period covering ${accrualDays} days based on the ${interval}-day interest interval. ${interestType === 'simple' ? 'Simple interest uses the current principal' : 'Compound interest uses the current balance'} of $${principalUsed.toFixed(2)}${interestType === 'compound' ? ', which includes all previous interest' : ', which may have been reduced by payments'}.`
                     };
                     
                     results.push({
@@ -550,8 +552,7 @@
                         <div class="calculation-step">
                             <strong>Rate Details:</strong><br>
                             Annual rate: ${(details.rate * 100).toFixed(3)}%<br>
-                            Period: ${details.days} days out of ${details.totalDays} days<br>
-                            Daily rate: ${((details.rate / 365) * 100).toFixed(8)}%
+                            Period: ${details.days} days out of ${details.totalDays} days
                         </div>
                     `;
                     
