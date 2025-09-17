@@ -451,7 +451,7 @@
                         explanation: event.period === 1 ? 
                             `${gracePeriodDays === 0 
                                 ? `No grace period: First interest charge appears ${accrualDays} days after issue date (day of invoice + interest interval). Interest covers the full ${accrualDays}-day period from issue date to charge date.` 
-                                : `With Grace period: Interest accrues from issue date to due date (${gracePeriodDays} days). First charge appears one day after due date expires. Interest covers the ${accrualDays}-day grace period.`} ${interestType === 'simple' ? 'Simple interest uses the current principal' : 'Compound interest uses the current balance'} of $${principalUsed.toFixed(2)}.` :
+                                : `With Grace period: Interest accrues from issue date to due date (${gracePeriodDays} days). First charge appears one day after the due date. Interest covers the ${accrualDays}-day grace period.`} ${interestType === 'simple' ? 'Simple interest uses the current principal' : 'Compound interest uses the current balance'} of $${principalUsed.toFixed(2)}.` :
                             `Subsequent interest charge: This is the ${event.periodName.toLowerCase()} period covering ${accrualDays} days based on the ${interval}-day interest interval. ${interestType === 'simple' ? 'Simple interest uses the current principal' : 'Compound interest uses the current balance'} of $${principalUsed.toFixed(2)}${interestType === 'compound' ? ', which includes all previous interest' : ', which may have been reduced by payments'}.`
                     };
                     
