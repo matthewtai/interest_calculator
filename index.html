@@ -110,7 +110,8 @@
         
         .results-table {
             width: 100%;
-            border-collapse: collapse;
+            border-collapse: separate;
+            border-spacing: 0;
             margin-top: 10px;
         }
         
@@ -412,6 +413,238 @@
                 font-size: 13px;
             }
         }
+        
+        /* Editable Results Table Styles */
+        .editable-input {
+            border: 1px solid transparent;
+            background: transparent;
+            padding: 4px 6px;
+            border-radius: 3px;
+            font-size: 14px;
+            font-family: Arial, sans-serif;
+            width: 100%;
+            box-sizing: border-box;
+            transition: all 0.2s ease;
+        }
+        
+        .editable-input:hover {
+            border-color: #007bff;
+            background: #f8f9fa;
+        }
+        
+        .editable-input:focus {
+            outline: none;
+            border-color: #007bff;
+            background: white;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+        }
+        
+        .payment-row-modified {
+            background-color: #fff3cd !important;
+            border-left: 4px solid #ffc107;
+        }
+        
+        .payment-row-modified .editable-input {
+            background-color: #fffbf0;
+            border-color: #ffc107;
+        }
+        
+        .change-indicator {
+            display: inline-block;
+            margin-left: 5px;
+            padding: 2px 6px;
+            background-color: #ffc107;
+            color: #856404;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            animation: pulse 1s ease-in-out;
+        }
+        
+        .payment-changes-summary {
+            margin-top: 15px;
+            padding: 12px;
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .payment-changes-summary.show {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        .change-list {
+            margin-top: 8px;
+            list-style: none;
+            padding: 0;
+        }
+        
+        .change-list li {
+            margin: 4px 0;
+            padding: 4px 0;
+            font-size: 13px;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        /* Insert Row Functionality */
+        .results-table tbody tr {
+            position: relative;
+        }
+        
+        .results-table tbody tr:hover .insert-add-btn {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .results-table tbody tr.custom-entry-row:hover .insert-delete-btn {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .insert-add-btn {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            color: #007bff;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease;
+            z-index: 10;
+            line-height: 1;
+            padding: 0;
+            width: auto;
+            height: auto;
+        }
+        
+        .insert-add-btn:hover {
+            color: #0056b3;
+            transform: translateY(-50%) scale(1.2);
+        }
+        
+        .insert-add-btn:active {
+            transform: translateY(-50%) scale(1.1);
+        }
+        
+        .insert-delete-btn {
+            position: absolute;
+            right: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            color: #dc3545;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease;
+            z-index: 10;
+            line-height: 1;
+            padding: 0;
+            width: auto;
+            height: auto;
+        }
+        
+        .insert-delete-btn:hover {
+            color: #c82333;
+            transform: translateY(-50%) scale(1.2);
+        }
+        
+        .insert-delete-btn:active {
+            transform: translateY(-50%) scale(1.1);
+        }
+        
+        .insert-form-row {
+            background: #f0f8ff !important;
+            border: 2px solid #007bff;
+        }
+        
+        .insert-form-row td {
+            padding: 8px 4px !important;
+        }
+        
+        .insert-form-input {
+            width: 100%;
+            padding: 4px 6px;
+            border: 1px solid #007bff;
+            border-radius: 3px;
+            font-size: 14px;
+            font-family: Arial, sans-serif;
+            box-sizing: border-box;
+        }
+        
+        .insert-form-select {
+            width: 100%;
+            padding: 4px 6px;
+            border: 1px solid #007bff;
+            border-radius: 3px;
+            font-size: 14px;
+            font-family: Arial, sans-serif;
+            background: white;
+        }
+        
+        .insert-form-buttons {
+            display: flex;
+            gap: 4px;
+            justify-content: center;
+        }
+        
+        .insert-btn {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 3px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .insert-btn-save {
+            background: #28a745;
+            color: white;
+        }
+        
+        .insert-btn-save:hover {
+            background: #218838;
+        }
+        
+        .insert-btn-cancel {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .insert-btn-cancel:hover {
+            background: #5a6268;
+        }
+        
+        .custom-entry-row {
+            background-color: #e8f4fd !important;
+            border-left: 4px solid #007bff;
+        }
+        
+        .custom-entry-indicator {
+            display: inline-block;
+            margin-left: 5px;
+            padding: 2px 6px;
+            background-color: #007bff;
+            color: white;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -559,6 +792,10 @@
 
     <script>
         let paymentCounter = 0;
+        let originalPaymentData = new Map(); // Track original payment values
+        let paymentModifications = new Map(); // Track modifications
+        let customEntries = []; // Track custom entries added to results
+        let currentInsertRowIndex = -1; // Track which row is currently being inserted
         
         function addPaymentRow() {
             paymentCounter++;
@@ -574,7 +811,7 @@
                 </div>
                 <div style="display: flex; flex-direction: column;">
                     <label style="font-size: 12px; margin-bottom: 2px;">Payment Date</label>
-                    <input type="date" id="payment-date-${paymentCounter}" style="width: 140px; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">
+                    <input type="text" id="payment-date-${paymentCounter}" placeholder="MM/DD/YYYY" style="width: 140px; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">
                 </div>
                 <button type="button" onclick="removePaymentRow(${paymentCounter})" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin-top: 15px;">Remove</button>
             `;
@@ -607,16 +844,101 @@
                 
                 if (amountInput && dateInput && amountInput.value && dateInput.value) {
                     const amount = parseFloat(amountInput.value);
-                    const date = new Date(dateInput.value + 'T00:00:00');
+                    let date;
+                    let dateValid = false;
                     
-                    if (amount > 0 && !isNaN(date.getTime())) {
-                        payments.push({ amount, date, id });
+                    // Try multiple date parsing strategies
+                    const dateValue = dateInput.value.trim();
+                    
+                    // Strategy 1: MM/DD/YYYY format
+                    if (dateValue.includes('/')) {
+                        const parts = dateValue.split('/');
+                        if (parts.length === 3) {
+                            const month = parseInt(parts[0], 10);
+                            const day = parseInt(parts[1], 10);
+                            const year = parseInt(parts[2], 10);
+                            
+                            // Validate date components
+                            if (month >= 1 && month <= 12 && day >= 1 && day <= 31 && year >= 1900 && year <= 2100) {
+                                date = new Date(year, month - 1, day);
+                                // Double-check the date is valid (handles invalid dates like 02/30/2023)
+                                if (date.getFullYear() === year && date.getMonth() === (month - 1) && date.getDate() === day) {
+                                    dateValid = true;
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Strategy 2: Try standard Date parsing as fallback
+                    if (!dateValid) {
+                        try {
+                            date = new Date(dateValue);
+                            if (!isNaN(date.getTime()) && date.getFullYear() >= 1900 && date.getFullYear() <= 2100) {
+                                dateValid = true;
+                            }
+                        } catch (e) {
+                            // Ignore parsing errors
+                        }
+                    }
+                    
+                    // Strategy 3: If still invalid, use a default date but keep the payment
+                    if (!dateValid) {
+                        date = new Date(); // Use current date as fallback
+                        dateValid = true;
+                        
+                        // Highlight the input field to show there's an issue
+                        dateInput.style.border = '2px solid #dc3545';
+                        dateInput.style.backgroundColor = '#f8d7da';
+                        dateInput.title = `Invalid date format: "${dateValue}". Using current date for calculations.`;
+                    } else {
+                        // Clear any previous error styling
+                        dateInput.style.border = '';
+                        dateInput.style.backgroundColor = '';
+                        dateInput.title = '';
+                    }
+                    
+                    // Always include the payment if amount is valid, even with date issues
+                    if (amount > 0 && !isNaN(amount)) {
+                        payments.push({ 
+                            amount, 
+                            date, 
+                            id,
+                            originalDateValue: dateValue,
+                            dateValid: dateValid
+                        });
+                    } else if (amountInput.value.trim() !== '') {
+                        // Highlight invalid amounts too
+                        console.warn(`Invalid amount for payment ${id}: "${amountInput.value}"`);
+                        amountInput.style.border = '2px solid #dc3545';
+                        amountInput.style.backgroundColor = '#f8d7da';
+                        amountInput.title = `Invalid amount: "${amountInput.value}"`;
+                    }
+                } else if (amountInput && dateInput && (amountInput.value.trim() !== '' || dateInput.value.trim() !== '')) {
+                    // Show warning for incomplete payments (has some data but not complete)
+                    console.warn(`Incomplete payment data for payment ${id}: amount="${amountInput?.value}", date="${dateInput?.value}"`);
+                    
+                    if (!amountInput.value.trim()) {
+                        amountInput.style.border = '2px solid #ffc107';
+                        amountInput.style.backgroundColor = '#fff3cd';
+                        amountInput.title = 'Amount is required';
+                    }
+                    if (!dateInput.value.trim()) {
+                        dateInput.style.border = '2px solid #ffc107';
+                        dateInput.style.backgroundColor = '#fff3cd';
+                        dateInput.title = 'Date is required';
                     }
                 }
             }
             
-            // Sort payments by date
-            return payments.sort((a, b) => a.date - b.date);
+            // Sort payments by date, but handle invalid dates gracefully
+            return payments.sort((a, b) => {
+                try {
+                    return a.date - b.date;
+                } catch (e) {
+                    console.warn('Error sorting payments by date:', e);
+                    return 0; // Keep original order if sorting fails
+                }
+            });
         }
 
         // Tab Navigation functionality
@@ -967,11 +1289,11 @@
                 addPaymentFromCSV(payment.amount, payment.date);
             });
             
-            // Switch to calculator tab to show populated data
-            switchTab('calculator');
-            
-            // Trigger recalculation
+            // Trigger recalculation first
             calculateGracePeriod();
+            
+            // Switch to results tab to show the calculations
+            switchTab('results');
         }
         
         function convertDateFormat(dateStr) {
@@ -1002,9 +1324,9 @@
                 </div>
                 <div style="display: flex; flex-direction: column;">
                     <label style="font-size: 12px; margin-bottom: 2px;">Payment Date</label>
-                    <input type="date" id="payment-date-${paymentCounter}" value="${convertedDate || ''}" style="width: 140px; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">
+                    <input type="text" id="payment-date-${paymentCounter}" value="${date}" placeholder="MM/DD/YYYY" style="width: 140px; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">
                 </div>
-                <button type="button" onclick="removePaymentRow(${paymentCounter})" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin-top: 15px;">Remove</button>
+                <button type="button" onclick="removePaymentRow(${paymentCounter})" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin-top: 15px;">
             `;
             
             container.appendChild(paymentRow);
@@ -1169,6 +1491,18 @@
                 });
             });
             
+            // Add custom entries to timeline
+            customEntries.forEach(entry => {
+                timeline.push({
+                    type: 'custom',
+                    subType: entry.subType,
+                    date: entry.date,
+                    amount: entry.amount,
+                    description: entry.description,
+                    id: entry.id
+                });
+            });
+            
             // Sort timeline by date
             timeline.sort((a, b) => a.date - b.date);
             
@@ -1248,14 +1582,45 @@
                         type: 'payment',
                         period: 'Payment',
                         date: formatDate(event.date),
+                        rawDate: event.date,
                         days: '-',
                         interest: 0,
                         payment: paymentAmount,
+                        originalAmount: event.amount,
+                        originalDate: formatDate(event.date),
                         balance: runningTotal,
+                        id: event.id,
                         calculationDetails: {
                             type: 'Payment Applied',
                             explanation: `Payment of $${event.amount.toFixed(2)} applied. ${paymentAmount < event.amount ? `Only $${paymentAmount.toFixed(2)} was applied as it cannot exceed the current balance.` : ''} ${interestType === 'simple' ? `For simple interest, this reduces the principal used for future interest calculations to $${currentPrincipal.toFixed(2)}.` : ''}`,
                             result: paymentAmount
+                        }
+                    });
+                } else if (event.type === 'custom') {
+                    // Apply custom entry
+                    const customAmount = event.amount;
+                    runningTotal += customAmount; // Positive amounts increase balance, negative decrease
+                    
+                    // For simple interest and negative amounts (payments/credits), reduce principal
+                    if (interestType === 'simple' && customAmount < 0) {
+                        currentPrincipal = Math.max(0, currentPrincipal + customAmount); // customAmount is negative
+                    }
+                    
+                    results.push({
+                        type: 'custom',
+                        subType: event.subType,
+                        period: event.description,
+                        date: formatDate(event.date),
+                        rawDate: event.date,
+                        days: '-',
+                        interest: 0,
+                        customAmount: customAmount,
+                        balance: runningTotal,
+                        id: event.id,
+                        calculationDetails: {
+                            type: event.description,
+                            explanation: `Custom entry: ${event.description} of ${customAmount >= 0 ? '+' : ''}$${customAmount.toFixed(2)} applied. ${interestType === 'simple' && customAmount < 0 ? `For simple interest, this reduces the principal used for future interest calculations to $${currentPrincipal.toFixed(2)}.` : ''}`,
+                            result: Math.abs(customAmount)
                         }
                     });
                 }
@@ -1324,7 +1689,7 @@
                     `;
                     
                 html += `
-                    <tr>
+                    <tr data-row-index="${results.indexOf(result)}" style="position: relative;">
                         <td>${result.period}</td>
                         <td>${result.date}</td>
                         <td>${result.days}</td>
@@ -1334,7 +1699,10 @@
                                     <div class="tooltip">${tooltipContent}</div>
                                 </div>
                             </td>
-                            <td>$${result.balance.toFixed(2)}</td>
+                            <td style="position: relative;">
+                                $${result.balance.toFixed(2)}
+                                <button class="insert-add-btn" onclick="showInsertForm(${results.indexOf(result)})" title="Add entry after this row">+</button>
+                            </td>
                         </tr>
                     `;
                 } else if (result.type === 'payment') {
@@ -1348,10 +1716,57 @@
                         </div>
                     `;
                     
+                    // Store original payment data if not already stored
+                    const paymentKey = `payment-${result.id}`;
+                    if (!originalPaymentData.has(paymentKey)) {
+                        originalPaymentData.set(paymentKey, {
+                            amount: result.payment,
+                            date: result.date,
+                            originalAmount: result.originalAmount || result.payment,
+                            originalDate: result.originalDate || result.date
+                        });
+                    }
+                    
+                    const isModified = paymentModifications.has(paymentKey);
+                    const modificationClass = isModified ? 'payment-row-modified' : '';
+                    const changeIndicator = isModified ? '<span class="change-indicator">MODIFIED</span>' : '';
+                    
+                    // Check if this payment date was modified
+                    const modification = paymentModifications.get(paymentKey);
+                    const hasDateModification = modification && modification.date;
+                    
+                    let dateDisplayHtml;
+                    if (hasDateModification) {
+                        // Show both original and modified dates
+                        dateDisplayHtml = `
+                            <div style="margin-bottom: 5px;">
+                                <input type="text" 
+                                       class="editable-input payment-date-edit" 
+                                       value="${formatDate(modification.date)}"
+                                       placeholder="MM/DD/YYYY"
+                                       data-payment-key="${paymentKey}"
+                                       onchange="updatePaymentFromTable('${paymentKey}', 'date', this.value)">
+                            </div>
+                            <div style="font-size: 11px; color: #6c757d; font-style: italic;">
+                                Original: ${modification.originalDate}
+                            </div>
+                        `;
+                    } else {
+                        // Show just the editable date input
+                        dateDisplayHtml = `
+                            <input type="text" 
+                                   class="editable-input payment-date-edit" 
+                                   value="${result.date}"
+                                   placeholder="MM/DD/YYYY"
+                                   data-payment-key="${paymentKey}"
+                                   onchange="updatePaymentFromTable('${paymentKey}', 'date', this.value)">
+                        `;
+                    }
+                    
                     html += `
-                        <tr style="background-color: #e8f5e8;">
-                            <td>${result.period}</td>
-                            <td>${result.date}</td>
+                        <tr class="${modificationClass}" data-payment-key="${paymentKey}" data-row-index="${results.indexOf(result)}" style="position: relative; ${!isModified ? 'background-color: #e8f5e8;' : ''}">
+                            <td>${result.period}${changeIndicator}</td>
+                            <td>${dateDisplayHtml}</td>
                             <td>${result.days}</td>
                             <td>
                                 <div class="tooltip-container">
@@ -1359,9 +1774,151 @@
                                     <div class="tooltip">${tooltipContent}</div>
                                 </div>
                             </td>
-                        <td>$${result.balance.toFixed(2)}</td>
-                    </tr>
-                `;
+                            <td style="position: relative;">
+                                $${result.balance.toFixed(2)}
+                                <button class="insert-add-btn" onclick="showInsertForm(${results.indexOf(result)})" title="Add entry after this row">+</button>
+                            </td>
+                        </tr>
+                    `;
+                } else if (result.type === 'custom') {
+                    // Create tooltip content for custom entry
+                    const details = result.calculationDetails;
+                    const tooltipContent = `
+                        <div class="calculation-step"><strong>${details.type}</strong></div>
+                        <div class="calculation-step">${details.explanation}</div>
+                        <div class="calculation-step">
+                            <strong>Amount:</strong> ${result.customAmount >= 0 ? '+' : ''}$${Math.abs(result.customAmount).toFixed(2)}
+                        </div>
+                    `;
+                    
+                    const amountDisplay = result.customAmount >= 0 ? 
+                        `+$${result.customAmount.toFixed(2)}` : 
+                        `-$${Math.abs(result.customAmount).toFixed(2)}`;
+                    
+                    // Check if this custom entry was modified
+                    const customKey = `custom-${result.id}`;
+                    const customModification = paymentModifications.get(customKey);
+                    const hasCustomModification = customModification && (customModification.description || customModification.date || customModification.amount);
+                    
+                    const customModificationClass = hasCustomModification ? 'payment-row-modified' : '';
+                    const customChangeIndicator = hasCustomModification ? '<span class="change-indicator">MODIFIED</span>' : '';
+                    
+                    // Store original custom entry data if not already stored
+                    if (!originalPaymentData.has(customKey)) {
+                        originalPaymentData.set(customKey, {
+                            description: result.period,
+                            date: result.date,
+                            amount: result.customAmount,
+                            originalDescription: result.period,
+                            originalDate: result.date,
+                            originalAmount: result.customAmount
+                        });
+                    }
+                    
+                    let customDescriptionHtml, customDateHtml, customAmountHtml;
+                    
+                    // Description field
+                    if (hasCustomModification && customModification.description) {
+                        customDescriptionHtml = `
+                            <div style="margin-bottom: 5px;">
+                                <input type="text" 
+                                       class="editable-input custom-description-edit" 
+                                       value="${customModification.description}"
+                                       data-custom-key="${customKey}"
+                                       onchange="updateCustomEntryFromTable('${customKey}', 'description', this.value)"
+                                       style="width: 100%;">
+                            </div>
+                            <div style="font-size: 11px; color: #6c757d; font-style: italic;">
+                                Original: ${customModification.originalDescription}
+                            </div>
+                        `;
+                    } else {
+                        customDescriptionHtml = `
+                            <input type="text" 
+                                   class="editable-input custom-description-edit" 
+                                   value="${result.period}"
+                                   data-custom-key="${customKey}"
+                                   onchange="updateCustomEntryFromTable('${customKey}', 'description', this.value)"
+                                   style="width: 100%;">
+                        `;
+                    }
+                    
+                    // Date field
+                    if (hasCustomModification && customModification.date) {
+                        customDateHtml = `
+                            <div style="margin-bottom: 5px;">
+                                <input type="text" 
+                                       class="editable-input custom-date-edit" 
+                                       value="${formatDate(customModification.date)}"
+                                       placeholder="MM/DD/YYYY"
+                                       data-custom-key="${customKey}"
+                                       onchange="updateCustomEntryFromTable('${customKey}', 'date', this.value)">
+                            </div>
+                            <div style="font-size: 11px; color: #6c757d; font-style: italic;">
+                                Original: ${customModification.originalDate}
+                            </div>
+                        `;
+                    } else {
+                        customDateHtml = `
+                            <input type="text" 
+                                   class="editable-input custom-date-edit" 
+                                   value="${result.date}"
+                                   placeholder="MM/DD/YYYY"
+                                   data-custom-key="${customKey}"
+                                   onchange="updateCustomEntryFromTable('${customKey}', 'date', this.value)">
+                        `;
+                    }
+                    
+                    // Amount field
+                    if (hasCustomModification && customModification.amount !== undefined) {
+                        const modifiedAmountDisplay = customModification.amount >= 0 ? 
+                            `+$${customModification.amount.toFixed(2)}` : 
+                            `-$${Math.abs(customModification.amount).toFixed(2)}`;
+                        
+                        customAmountHtml = `
+                            <div style="margin-bottom: 5px;">
+                                <input type="number" 
+                                       class="editable-input custom-amount-edit" 
+                                       value="${customModification.amount.toFixed(2)}"
+                                       step="0.01"
+                                       data-custom-key="${customKey}"
+                                       onchange="updateCustomEntryFromTable('${customKey}', 'amount', this.value)"
+                                       style="width: 80px; display: inline-block;">
+                            </div>
+                            <div style="font-size: 11px; color: #6c757d; font-style: italic;">
+                                Original: ${result.customAmount >= 0 ? '+' : ''}$${Math.abs(result.customAmount).toFixed(2)}
+                            </div>
+                        `;
+                    } else {
+                        customAmountHtml = `
+                            <input type="number" 
+                                   class="editable-input custom-amount-edit" 
+                                   value="${result.customAmount.toFixed(2)}"
+                                   step="0.01"
+                                   data-custom-key="${customKey}"
+                                   onchange="updateCustomEntryFromTable('${customKey}', 'amount', this.value)"
+                                   style="width: 80px; display: inline-block;">
+                        `;
+                    }
+                    
+                    html += `
+                        <tr class="custom-entry-row ${customModificationClass}" data-row-index="${results.indexOf(result)}" data-custom-key="${customKey}" style="position: relative;">
+                            <td>${customDescriptionHtml}<span class="custom-entry-indicator">CUSTOM</span>${customChangeIndicator}</td>
+                            <td>${customDateHtml}</td>
+                            <td>${result.days}</td>
+                            <td>
+                                <div class="tooltip-container">
+                                    ${customAmountHtml}
+                                    <div class="tooltip">${tooltipContent}</div>
+                                </div>
+                            </td>
+                            <td style="position: relative;">
+                                $${result.balance.toFixed(2)}
+                                <button class="insert-delete-btn" onclick="deleteCustomEntry('${result.id}')" title="Delete this custom entry">−</button>
+                                <button class="insert-add-btn" onclick="showInsertForm(${results.indexOf(result)})" title="Add entry after this row">+</button>
+                            </td>
+                        </tr>
+                    `;
                 }
                 
                 // Always track the balance from each transaction (this will be the final balance after the last transaction)
@@ -1378,6 +1935,9 @@
                 </table>
             `;
             
+            // Payment changes are tracked but not displayed as a separate summary
+            // Modified payments are highlighted in the table instead
+            
             document.getElementById(elementId).innerHTML = html;
             document.getElementById('results1').style.display = 'block';
             
@@ -1387,8 +1947,8 @@
         
         function formatDate(date) {
             return date.toLocaleDateString('en-US', {
-                month: 'numeric',
-                day: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
                 year: 'numeric'
             });
         }
@@ -1420,6 +1980,458 @@
         function calculateDaysBetween(startDate, endDate) {
             const timeDiff = endDate.getTime() - startDate.getTime();
             return Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+        }
+        
+        // Format date for input field (YYYY-MM-DD)
+        function formatDateForInput(date) {
+            if (typeof date === 'string') {
+                // If it's already a formatted date string, try to parse it
+                const parsed = new Date(date);
+                if (!isNaN(parsed.getTime())) {
+                    date = parsed;
+                } else {
+                    // Try to parse MM/DD/YYYY format
+                    const parts = date.split('/');
+                    if (parts.length === 3) {
+                        date = new Date(parts[2], parts[0] - 1, parts[1]);
+                    } else {
+                        return '';
+                    }
+                }
+            }
+            
+            if (!(date instanceof Date) || isNaN(date.getTime())) {
+                return '';
+            }
+            
+            return date.toISOString().split('T')[0];
+        }
+        
+        // Validate date format and return parsed date or null
+        function validateAndParseDate(dateValue, inputElement) {
+            if (!dateValue || !dateValue.trim()) return null;
+            
+            const trimmedValue = dateValue.trim();
+            let parsedDate = null;
+            let isValid = false;
+            
+            // Try MM/DD/YYYY format first
+            if (trimmedValue.includes('/')) {
+                const parts = trimmedValue.split('/');
+                if (parts.length === 3) {
+                    const month = parseInt(parts[0], 10);
+                    const day = parseInt(parts[1], 10);
+                    const year = parseInt(parts[2], 10);
+                    
+                    if (month >= 1 && month <= 12 && day >= 1 && day <= 31 && year >= 1900 && year <= 2100) {
+                        parsedDate = new Date(year, month - 1, day);
+                        // Verify the date is actually valid (handles cases like 02/30/2023)
+                        if (parsedDate.getFullYear() === year && parsedDate.getMonth() === (month - 1) && parsedDate.getDate() === day) {
+                            isValid = true;
+                        }
+                    }
+                }
+            }
+            
+            // Try standard Date parsing as fallback
+            if (!isValid) {
+                try {
+                    parsedDate = new Date(trimmedValue);
+                    if (!isNaN(parsedDate.getTime()) && parsedDate.getFullYear() >= 1900 && parsedDate.getFullYear() <= 2100) {
+                        isValid = true;
+                    }
+                } catch (e) {
+                    // Parsing failed
+                }
+            }
+            
+            // Update input styling based on validation
+            if (inputElement) {
+                if (isValid) {
+                    inputElement.style.border = '';
+                    inputElement.style.backgroundColor = '';
+                    inputElement.title = '';
+                } else {
+                    inputElement.style.border = '2px solid #dc3545';
+                    inputElement.style.backgroundColor = '#f8d7da';
+                    inputElement.title = `Invalid date format: "${trimmedValue}". Please use MM/DD/YYYY format.`;
+                }
+            }
+            
+            return isValid ? parsedDate : null;
+        }
+        
+        // Update payment from table edit
+        function updatePaymentFromTable(paymentKey, field, newValue) {
+            if (!newValue) return;
+            
+            const originalData = originalPaymentData.get(paymentKey);
+            if (!originalData) return;
+            
+            // Store the modification
+            if (!paymentModifications.has(paymentKey)) {
+                paymentModifications.set(paymentKey, {});
+            }
+            
+            const modification = paymentModifications.get(paymentKey);
+            
+            if (field === 'date') {
+                // Find the input element for validation styling
+                const inputElement = document.querySelector(`input[data-payment-key="${paymentKey}"]`);
+                const newDate = validateAndParseDate(newValue, inputElement);
+                
+                if (newDate) {
+                    const originalDate = new Date(originalData.originalDate);
+                    
+                    if (newDate.getTime() !== originalDate.getTime()) {
+                        modification.date = newDate;
+                        modification.originalDate = originalData.originalDate;
+                    } else {
+                        delete modification.date;
+                        delete modification.originalDate;
+                    }
+                    
+                    // Update the actual payment data in the payments container
+                    updatePaymentInContainer(paymentKey, field, newValue);
+                    
+                    // Update the payment in the original payments array
+                    updatePaymentInTimeline(paymentKey, field, newValue);
+                } else {
+                    // Invalid date - don't update anything, just show validation error
+                    console.warn(`Invalid date format for payment ${paymentKey}: "${newValue}". Payment not updated.`);
+                    return;
+                }
+            }
+            
+            // If no modifications remain, remove the entry
+            if (Object.keys(modification).length === 0) {
+                paymentModifications.delete(paymentKey);
+            }
+            
+            // Recalculate results
+            calculateGracePeriod();
+        }
+        
+        // Update payment in the main payments container
+        function updatePaymentInContainer(paymentKey, field, newValue) {
+            // Extract the payment ID from the key
+            const paymentId = paymentKey.replace('payment-', '');
+            
+            // Find the corresponding payment input in the payments container
+            if (field === 'date') {
+                const dateInput = document.getElementById(`payment-date-${paymentId}`);
+                if (dateInput) {
+                    // Convert the date format if needed for the input field
+                    if (newValue.includes('/')) {
+                        dateInput.value = newValue; // Already in MM/DD/YYYY format
+                    } else {
+                        // Convert from Date object to MM/DD/YYYY
+                        const date = new Date(newValue);
+                        if (!isNaN(date.getTime())) {
+                            dateInput.value = formatDate(date);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Update payment in the timeline data
+        function updatePaymentInTimeline(paymentKey, field, newValue) {
+            // The payments are retrieved fresh from getPayments() function each time
+            // so we don't need to update a separate timeline array
+            // The payment inputs in the DOM are the source of truth
+        }
+        
+        // Generate payment changes summary
+        function generatePaymentChangesSummary() {
+            if (paymentModifications.size === 0) return '';
+            
+            let summaryHtml = `
+                <div class="payment-changes-summary show">
+                    <strong>Payment Modifications:</strong>
+                    <ul class="change-list">
+            `;
+            
+            paymentModifications.forEach((changes, paymentKey) => {
+                const original = originalPaymentData.get(paymentKey);
+                if (!original) return;
+                
+                const isCustomEntry = paymentKey.startsWith('custom-');
+                const entryType = isCustomEntry ? 'Custom Entry' : 'Payment';
+                
+                if (changes.description !== undefined) {
+                    summaryHtml += `
+                        <li>• ${entryType} description changed from "${changes.originalDescription}" to "${changes.description}"</li>
+                    `;
+                }
+                
+                if (changes.date !== undefined) {
+                    summaryHtml += `
+                        <li>• ${entryType} date changed from ${changes.originalDate} to ${formatDate(changes.date)}</li>
+                    `;
+                }
+                
+                if (changes.amount !== undefined) {
+                    summaryHtml += `
+                        <li>• ${entryType} amount changed from ${changes.originalAmount >= 0 ? '+' : ''}$${Math.abs(changes.originalAmount).toFixed(2)} to ${changes.amount >= 0 ? '+' : ''}$${Math.abs(changes.amount).toFixed(2)}</li>
+                    `;
+                }
+            });
+            
+            summaryHtml += `
+                    </ul>
+                    <div style="margin-top: 8px; font-size: 12px; color: #856404;">
+                        <em>Note: Calculations automatically update based on your changes.</em>
+                    </div>
+                </div>
+            `;
+            
+            return summaryHtml;
+        }
+        
+        // Show insert form at specified row index
+        function showInsertForm(afterRowIndex) {
+            // Close any existing insert form
+            hideInsertForm();
+            
+            currentInsertRowIndex = afterRowIndex;
+            
+            // Find the table and the row after which to insert
+            const table = document.querySelector('.results-table tbody');
+            const rows = table.querySelectorAll('tr');
+            const targetRow = rows[afterRowIndex];
+            
+            if (!targetRow) return;
+            
+            // Create insert form row
+            const insertRow = document.createElement('tr');
+            insertRow.className = 'insert-form-row';
+            insertRow.id = 'insert-form-row';
+            
+            const today = new Date().toISOString().split('T')[0];
+            
+            const todayFormatted = formatDate(new Date());
+            
+            insertRow.innerHTML = `
+                <td>
+                    <input type="text" class="insert-form-input" id="insert-description" placeholder="Description">
+                </td>
+                <td>
+                    <input type="text" class="insert-form-input" id="insert-date" value="${todayFormatted}" placeholder="MM/DD/YYYY">
+                </td>
+                <td>
+                    -
+                </td>
+                <td>
+                    <input type="number" class="insert-form-input" id="insert-amount" placeholder="0.00" step="0.01">
+                </td>
+                <td>
+                    <div class="insert-form-buttons">
+                        <button class="insert-btn insert-btn-save" onclick="saveCustomEntry()">Save</button>
+                        <button class="insert-btn insert-btn-cancel" onclick="hideInsertForm()">Cancel</button>
+                    </div>
+                </td>
+            `;
+            
+            // Insert the form row after the target row
+            targetRow.parentNode.insertBefore(insertRow, targetRow.nextSibling);
+            
+            // Focus on the description input
+            document.getElementById('insert-description').focus();
+        }
+        
+        // Hide insert form
+        function hideInsertForm() {
+            const insertRow = document.getElementById('insert-form-row');
+            if (insertRow) {
+                insertRow.remove();
+            }
+            currentInsertRowIndex = -1;
+        }
+        
+        // Save custom entry
+        function saveCustomEntry() {
+            const description = document.getElementById('insert-description').value.trim();
+            const dateValue = document.getElementById('insert-date').value;
+            const amount = parseFloat(document.getElementById('insert-amount').value);
+            
+            if (!description || !dateValue || isNaN(amount) || amount === 0) {
+                alert('Please enter a description, valid date, and non-zero amount.');
+                return;
+            }
+            
+            // Parse MM/DD/YYYY date format
+            let entryDate;
+            if (dateValue.includes('/')) {
+                const parts = dateValue.split('/');
+                if (parts.length === 3) {
+                    const month = parseInt(parts[0], 10);
+                    const day = parseInt(parts[1], 10);
+                    const year = parseInt(parts[2], 10);
+                    entryDate = new Date(year, month - 1, day);
+                } else {
+                    alert('Please enter date in MM/DD/YYYY format.');
+                    return;
+                }
+            } else {
+                entryDate = new Date(dateValue + 'T00:00:00');
+            }
+            
+            if (isNaN(entryDate.getTime())) {
+                alert('Please enter a valid date in MM/DD/YYYY format.');
+                return;
+            }
+            
+            // Create custom entry object
+            const customEntry = {
+                id: Date.now() + Math.random(), // Unique ID
+                type: 'custom',
+                subType: 'custom',
+                date: entryDate,
+                amount: amount,
+                description: description,
+                insertAfterIndex: currentInsertRowIndex
+            };
+            
+            // Add to custom entries
+            customEntries.push(customEntry);
+            
+            // Hide form and recalculate
+            hideInsertForm();
+            calculateGracePeriod();
+        }
+        
+        // Update custom entry from table edit
+        function updateCustomEntryFromTable(customKey, field, newValue) {
+            if (!newValue && field !== 'amount') return;
+            
+            const originalData = originalPaymentData.get(customKey);
+            if (!originalData) return;
+            
+            // Store the modification
+            if (!paymentModifications.has(customKey)) {
+                paymentModifications.set(customKey, {});
+            }
+            
+            const modification = paymentModifications.get(customKey);
+            
+            if (field === 'description') {
+                if (newValue !== originalData.originalDescription) {
+                    modification.description = newValue;
+                    modification.originalDescription = originalData.originalDescription;
+                } else {
+                    delete modification.description;
+                    delete modification.originalDescription;
+                }
+            } else if (field === 'date') {
+                let newDate;
+                // Parse MM/DD/YYYY format
+                if (newValue.includes('/')) {
+                    const parts = newValue.split('/');
+                    if (parts.length === 3) {
+                        const month = parseInt(parts[0], 10);
+                        const day = parseInt(parts[1], 10);
+                        const year = parseInt(parts[2], 10);
+                        newDate = new Date(year, month - 1, day);
+                    } else {
+                        return; // Invalid format
+                    }
+                } else {
+                    newDate = new Date(newValue + 'T00:00:00');
+                }
+                
+                const originalDate = new Date(originalData.originalDate);
+                
+                if (newDate.getTime() !== originalDate.getTime()) {
+                    modification.date = newDate;
+                    modification.originalDate = originalData.originalDate;
+                } else {
+                    delete modification.date;
+                    delete modification.originalDate;
+                }
+            } else if (field === 'amount') {
+                const newAmount = parseFloat(newValue);
+                if (newAmount !== originalData.originalAmount) {
+                    modification.amount = newAmount;
+                    modification.originalAmount = originalData.originalAmount;
+                } else {
+                    delete modification.amount;
+                    delete modification.originalAmount;
+                }
+            }
+            
+            // If no modifications remain, remove the entry
+            if (Object.keys(modification).length === 0) {
+                paymentModifications.delete(customKey);
+            }
+            
+            // Update the actual custom entry data
+            updateCustomEntryData(customKey, field, newValue);
+            
+            // Recalculate results
+            calculateGracePeriod();
+        }
+        
+        // Update custom entry data in the customEntries array
+        function updateCustomEntryData(customKey, field, newValue) {
+            const entryId = customKey.replace('custom-', '');
+            const customEntry = customEntries.find(entry => entry.id == entryId);
+            
+            if (customEntry) {
+                if (field === 'description') {
+                    customEntry.description = newValue;
+                } else if (field === 'date') {
+                    // Parse MM/DD/YYYY format
+                    if (newValue.includes('/')) {
+                        const parts = newValue.split('/');
+                        if (parts.length === 3) {
+                            const month = parseInt(parts[0], 10);
+                            const day = parseInt(parts[1], 10);
+                            const year = parseInt(parts[2], 10);
+                            customEntry.date = new Date(year, month - 1, day);
+                        }
+                    } else {
+                        customEntry.date = new Date(newValue + 'T00:00:00');
+                    }
+                } else if (field === 'amount') {
+                    customEntry.amount = parseFloat(newValue);
+                }
+            }
+        }
+        
+        // Delete custom entry
+        function deleteCustomEntry(entryId) {
+            if (confirm('Are you sure you want to delete this custom entry?')) {
+                // Remove from custom entries array
+                customEntries = customEntries.filter(entry => entry.id != entryId);
+                
+                // Remove any modifications for this entry
+                const customKey = `custom-${entryId}`;
+                paymentModifications.delete(customKey);
+                originalPaymentData.delete(customKey);
+                
+                // Recalculate results
+                calculateGracePeriod();
+            }
+        }
+        
+        // Get description for entry type
+        function getEntryDescription(type, amount) {
+            const isPositive = amount > 0;
+            const absAmount = Math.abs(amount);
+            
+            switch (type) {
+                case 'payment':
+                    return isPositive ? `Payment Reversal` : `Payment`;
+                case 'interest':
+                    return isPositive ? `Interest Adjustment` : `Interest Credit`;
+                case 'fee':
+                    return isPositive ? `Fee/Charge` : `Fee Reversal`;
+                case 'credit':
+                    return isPositive ? `Credit Reversal` : `Credit Note`;
+                default:
+                    return isPositive ? `Custom Charge` : `Custom Credit`;
+            }
         }
         
         // Add event listeners for automatic calculation
