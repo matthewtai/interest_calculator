@@ -369,6 +369,10 @@
         }
         
         function parseCSVContent(csvContent) {
+            // Remove BOM if present (UTF-8 BOM is EF BB BF)
+            if (csvContent.charCodeAt(0) === 0xFEFF) {
+                csvContent = csvContent.substr(1);
+            }
             const lines = csvContent.split('\n').map(line => line.trim()).filter(line => line);
             
             try {
@@ -487,10 +491,16 @@
             const compoundRadio = document.querySelector('input[name="interestType"][value="compound"]');
             const simpleRadio = document.querySelector('input[name="interestType"][value="simple"]');
             
+            console.log('Setting radio buttons - Compound Interest:', data.compoundInterest);
+            
             if (data.compoundInterest) {
                 compoundRadio.checked = true;
+                simpleRadio.checked = false;
+                console.log('Set to compound');
             } else {
                 simpleRadio.checked = true;
+                compoundRadio.checked = false;
+                console.log('Set to simple');
             }
             
             // Clear existing payments
