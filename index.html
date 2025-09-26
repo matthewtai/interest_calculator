@@ -330,15 +330,119 @@
             display: block;
             animation: slideIn 0.3s ease-out;
         }
+        
+        /* Tab Navigation Styles */
+        .tab-navigation {
+            display: flex;
+            background: #f8f9fa;
+            border-radius: 8px 8px 0 0;
+            margin: -30px -30px 30px -30px;
+            border-bottom: 2px solid #e9ecef;
+            overflow-x: auto;
+            flex-wrap: nowrap;
+        }
+        
+        .tab-button {
+            background: none;
+            border: none;
+            padding: 15px 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #6c757d;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            min-width: 140px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .tab-button:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+        
+        .tab-button.active {
+            background: white;
+            color: #007bff;
+            border-bottom: 3px solid #007bff;
+            margin-bottom: -2px;
+        }
+        
+        .tab-button.active::before {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #007bff;
+            border-radius: 2px 2px 0 0;
+        }
+        
+        .tab-icon {
+            font-size: 16px;
+        }
+        
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Mobile responsive tabs */
+        @media (max-width: 768px) {
+            .tab-navigation {
+                margin: -30px -20px 30px -20px;
+            }
+            
+            .tab-button {
+                min-width: 120px;
+                padding: 12px 15px;
+                font-size: 13px;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>(Manage) Compound & Simple Interest Calculator</h1>
         
-        <!-- Scenario 1: With Grace Period -->
+        <!-- Tab Navigation -->
+        <div class="tab-navigation">
+            <button class="tab-button active" onclick="switchTab('calculator')" id="tab-calculator">
+                <span class="tab-icon">🧮</span>
+                Calculator
+            </button>
+            <button class="tab-button" onclick="switchTab('payments')" id="tab-payments">
+                <span class="tab-icon">💰</span>
+                Payments & Credit Notes
+            </button>
+            <button class="tab-button" onclick="switchTab('upload')" id="tab-upload">
+                <span class="tab-icon">📁</span>
+                (TE) CSV Upload
+            </button>
+            <button class="tab-button" onclick="switchTab('results')" id="tab-results">
+                <span class="tab-icon">📊</span>
+                Results
+            </button>
+        </div>
+        
+        <!-- Tab Content Container -->
         <div class="scenario">
-            <h2>Interest Calculator</h2>
+            <!-- Calculator Tab -->
+            <div class="tab-content active" id="content-calculator">
+                <h2>Interest Calculator</h2>
             <div style="margin-bottom: 20px; padding: 10px; background-color: #fffbe6; border-left: 4px solid #ffe066; border-radius: 4px;">
                 <strong>Tip:</strong>
                 To retrieve bill interest details via the API, use:<br>
@@ -384,19 +488,29 @@
                     <input type="number" id="principal1" step="0.01" placeholder="1000.00">
                 </div>
             </div>
+            </div>
             
-            <!-- Payments Section -->
-            <div style="margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-radius: 5px; border: 1px solid #dee2e6;">
-                <h3 style="margin-top: 0; color: #495057;">Payments (Optional)</h3>
+            <!-- Payments Tab -->
+            <div class="tab-content" id="content-payments">
+                <h2>Payments & Credit Notes</h2>
+                <div style="margin-bottom: 20px; padding: 10px; background-color: #e8f5e8; border-left: 4px solid #28a745; border-radius: 4px;">
+                    <strong>Info:</strong>
+                    Add any payments or credit notes that were applied to the bill. These will be factored into the interest calculations.
+                </div>
+                
                 <div id="payments-container">
                     <!-- Payment rows will be added here -->
                 </div>
                 <button type="button" onclick="addPaymentRow()" style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 3px; cursor: pointer; margin-top: 10px;">Add Payment</button>
-        </div>
-        
-            <!-- CSV Upload Section -->
-            <div style="margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-radius: 5px; border: 1px solid #dee2e6;">
-                <h3 style="margin-top: 0; color: #495057;">(TE) Upload Bill Inspector CSV</h3>
+            </div>
+            
+            <!-- CSV Upload Tab -->
+            <div class="tab-content" id="content-upload">
+                <h2>(TE) CSV Upload</h2>
+                <div style="margin-bottom: 20px; padding: 10px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+                    
+                    Upload and parse a Bill Inspector CSV file to automatically populate the calculator with bill data including payments and credit notes
+                </div>
                 
                 <!-- Drag and Drop Zone -->
                 <div class="upload-zone" id="uploadZone">
@@ -418,7 +532,7 @@
                 <!-- Parse Section -->
                 <div class="parse-section" id="parseSection">
                     <button onclick="uploadAndParseCSV()" class="upload-button" style="background: linear-gradient(135deg, #28a745, #20c997);">
-                        📊 Parse CSV Data
+                        Parse CSV Data
                     </button>
                 </div>
                 
@@ -426,14 +540,18 @@
                 <div id="csvPreview" style="margin-top: 10px; max-height: 200px; overflow-y: auto; background: white; padding: 10px; border: 1px solid #ddd; border-radius: 3px; display: none;"></div>
             </div>
             
-            <!-- Results Section -->
-            <div id="results1" class="results" style="display:none;">
-                <div style="margin-bottom: 15px; padding: 10px; background-color: #f8f9fa; border-radius: 4px; border: 1px solid #dee2e6;">
-                    <label for="periods1" style="font-weight: bold; margin-right: 10px;">Display Number of Interest Charges:</label>
-                    <input type="number" id="periods1" min="1" value="5" style="width: 80px; padding: 5px; border: 1px solid #ccc; border-radius: 3px; margin-right: 10px;">
-                    <button onclick="calculatePeriodsToToday()" style="background: #17a2b8; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px;">Up to Today</button>
+            <!-- Results Tab -->
+            <div class="tab-content" id="content-results">
+                <h2>Interest Calculation Results</h2>
+                <div id="results1" class="results" style="display:none;">
+                    <div style="margin-bottom: 15px; padding: 10px; background-color: #f8f9fa; border-radius: 4px; border: 1px solid #dee2e6;">
+                        <label for="periods1" style="font-weight: bold; margin-right: 10px;">Display Number of Interest Charges:</label>
+                        <input type="number" id="periods1" min="1" value="5" style="width: 80px; padding: 5px; border: 1px solid #ccc; border-radius: 3px; margin-right: 10px;">
+                        <button onclick="calculatePeriodsToToday()" style="background: #17a2b8; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px;">Up to Today</button>
+                    </div>
+                    <div id="results1-content"></div>
                 </div>
-                <div id="results1-content"></div>
+            </div>
         </div>
         </div>
         
@@ -499,6 +617,66 @@
             
             // Sort payments by date
             return payments.sort((a, b) => a.date - b.date);
+        }
+
+        // Tab Navigation functionality
+        function switchTab(tabName) {
+            // Hide all tab contents
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active class from all tab buttons
+            const tabButtons = document.querySelectorAll('.tab-button');
+            tabButtons.forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            const selectedContent = document.getElementById(`content-${tabName}`);
+            if (selectedContent) {
+                selectedContent.classList.add('active');
+            }
+            
+            // Activate selected tab button
+            const selectedButton = document.getElementById(`tab-${tabName}`);
+            if (selectedButton) {
+                selectedButton.classList.add('active');
+            }
+            
+            // Auto-switch to results tab when calculations are completed
+            if (tabName === 'calculator' || tabName === 'payments') {
+                // Trigger recalculation to ensure results are up to date
+                setTimeout(() => {
+                    calculateGracePeriod();
+                }, 100);
+            }
+        }
+        
+        // Auto-switch to results tab when results are available
+        function autoSwitchToResults() {
+            const resultsElement = document.getElementById('results1');
+            if (resultsElement && resultsElement.style.display !== 'none') {
+                // Only auto-switch if we're not already on the results tab
+                const currentActiveTab = document.querySelector('.tab-button.active');
+                if (currentActiveTab && currentActiveTab.id !== 'tab-results') {
+                    // Add a visual indicator that results are ready
+                    const resultsTab = document.getElementById('tab-results');
+                    if (resultsTab) {
+                        resultsTab.style.background = '#e8f5e8';
+                        resultsTab.style.borderBottom = '3px solid #28a745';
+                        
+                        // Reset after a few seconds
+                        setTimeout(() => {
+                            if (!resultsTab.classList.contains('active')) {
+                                resultsTab.style.background = '';
+                                resultsTab.style.borderBottom = '';
+                            }
+                        }, 3000);
+                    }
+                }
+            }
         }
 
         // Drag and Drop functionality
@@ -788,6 +966,9 @@
             data.payments.forEach(payment => {
                 addPaymentFromCSV(payment.amount, payment.date);
             });
+            
+            // Switch to calculator tab to show populated data
+            switchTab('calculator');
             
             // Trigger recalculation
             calculateGracePeriod();
@@ -1199,6 +1380,9 @@
             
             document.getElementById(elementId).innerHTML = html;
             document.getElementById('results1').style.display = 'block';
+            
+            // Auto-indicate that results are ready
+            autoSwitchToResults();
         }
         
         function formatDate(date) {
