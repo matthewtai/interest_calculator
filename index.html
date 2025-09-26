@@ -249,17 +249,28 @@
                     <!-- Payment rows will be added here -->
                 </div>
                 <button type="button" onclick="addPaymentRow()" style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 3px; cursor: pointer; margin-top: 10px;">Add Payment</button>
-            </div>
-            
+        </div>
+        
+            <!-- CSV Upload Section -->
+            <div style="margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-radius: 5px; border: 1px solid #dee2e6;">
+                <h3 style="margin-top: 0; color: #495057;">(TE) Upload Bill Inspector CSV</h3>
+                <div style="margin-bottom: 10px;">
+                    <input type="file" id="csvFileInput" accept=".csv" style="margin-bottom: 10px;">
+                    <button onclick="uploadAndParseCSV()" style="background: #007bff; color: white; border: none; padding: 8px 15px; border-radius: 3px; cursor: pointer;">Parse CSV Data</button>
+                </div>
+                <div id="csvStatus" style="margin-top: 10px; padding: 10px; border-radius: 3px; display: none;"></div>
+                <div id="csvPreview" style="margin-top: 10px; max-height: 200px; overflow-y: auto; background: white; padding: 10px; border: 1px solid #ddd; border-radius: 3px; display: none;"></div>
+                </div>
             
             <!-- Results Section -->
             <div id="results1" class="results" style="display:none;">
                 <div style="margin-bottom: 15px; padding: 10px; background-color: #f8f9fa; border-radius: 4px; border: 1px solid #dee2e6;">
                     <label for="periods1" style="font-weight: bold; margin-right: 10px;">Display Number of Interest Charges:</label>
-                    <input type="number" id="periods1" min="1" max="50" value="5" style="width: 80px; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">
+                    <input type="number" id="periods1" min="1" value="5" style="width: 80px; padding: 5px; border: 1px solid #ccc; border-radius: 3px; margin-right: 10px;">
+                    <button onclick="calculatePeriodsToToday()" style="background: #17a2b8; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px;">Up to Today</button>
                 </div>
                 <div id="results1-content"></div>
-            </div>
+        </div>
         </div>
         
     </div>
@@ -326,7 +337,295 @@
             return payments.sort((a, b) => a.date - b.date);
         }
 
-        function calculateGracePeriod() {
+        // CSV Upload and Parsing Functions
+        function uploadAndParseCSV() {
+            const fileInput = document.getElementById('csvFileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showCSVStatus('Please select a CSV file first.', 'error');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const csvContent = e.target.result;
+                    const parsedData = parseCSVContent(csvContent);
+                    
+                    if (parsedData) {
+                        populateCalculatorFromCSV(parsedData);
+                        showCSVStatus('CSV data successfully parsed and applied!', 'success');
+                        showCSVPreview(parsedData);
+                    } else {
+                        showCSVStatus('Failed to parse CSV data. Please check the file format.', 'error');
+                    }
+                } catch (error) {
+                    showCSVStatus('Error reading CSV file: ' + error.message, 'error');
+                }
+            };
+            
+            reader.readAsText(file);
+        }
+        
+        function parseCSVContent(csvContent) {
+            const lines = csvContent.split('\n').map(line => line.trim()).filter(line => line);
+            
+            try {
+                // Find the main bill data (line 3 in the provided example)
+                const billDataLine = lines[2]; // 0-indexed, so line 3 is index 2
+                const billData = parseCSVLine(billDataLine);
+                
+                // Extract bill information
+                const billInfo = {
+                    balance: parseFloat(billData[54]) || 0, // Use 'total' column (index 54, not 55)
+                    interestRate: parseFloat(billData[22]) || 0, // interest_rate column
+                    interestPeriod: parseInt(billData[21]) || 30, // interest_period column
+                    issuedAt: billData[24] || '', // issued_at column
+                    dueAt: billData[16] || '', // due_at column
+                    compoundInterest: billData[44] === 'TRUE', // compound_interest? column
+                    payments: [],
+                    creditNotes: []
+                };
+                
+                // Find and parse Asset Transactions (payments)
+                const assetTransactionStart = findSectionStart(lines, 'Asset transactions');
+                if (assetTransactionStart > 0) {
+                    // Parse all asset transaction lines
+                    for (let i = assetTransactionStart + 2; i < lines.length; i++) {
+                        const line = lines[i];
+                        if (!line || line.trim() === '' || line.toLowerCase().includes('credit notes')) {
+                            break; // End of asset transactions section
+                        }
+                        
+                        const assetData = parseCSVLine(line);
+                        if (assetData[1] && assetData[11] && parseFloat(assetData[1]) > 0) { // amount and date
+                            billInfo.payments.push({
+                                amount: parseFloat(assetData[1]),
+                                date: assetData[11]
+                            });
+                        }
+                    }
+                }
+                
+                // Find and parse Credit Notes
+                const creditNoteStart = findSectionStart(lines, 'Credit notes');
+                if (creditNoteStart > 0) {
+                    // Parse all credit note lines
+                    for (let i = creditNoteStart + 2; i < lines.length; i++) {
+                        const line = lines[i];
+                        if (!line || line.trim() === '') {
+                            break; // End of credit notes section
+                        }
+                        
+                        const creditData = parseCSVLine(line);
+                        if (creditData[1] && creditData[5] && parseFloat(creditData[1]) > 0) { // amount and date
+                            billInfo.payments.push({
+                                amount: parseFloat(creditData[1]),
+                                date: creditData[5]
+                            });
+                        }
+                    }
+                }
+                
+                return billInfo;
+            } catch (error) {
+                console.error('Error parsing CSV:', error);
+                return null;
+            }
+        }
+        
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            
+            result.push(current.trim());
+            return result;
+        }
+        
+        function findSectionStart(lines, sectionName) {
+            for (let i = 0; i < lines.length; i++) {
+                if (lines[i].toLowerCase().includes(sectionName.toLowerCase())) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+        
+        function populateCalculatorFromCSV(data) {
+            // Set basic bill information
+            document.getElementById('rate1').value = (data.interestRate * 100).toFixed(3); // Convert to percentage
+            document.getElementById('interval1').value = data.interestPeriod;
+            document.getElementById('principal1').value = data.balance.toFixed(2);
+            
+            // Set dates (convert from M/D/YYYY to YYYY-MM-DD format)
+            if (data.issuedAt) {
+                const issueDate = convertDateFormat(data.issuedAt);
+                if (issueDate) document.getElementById('issueDate1').value = issueDate;
+            }
+            
+            if (data.dueAt) {
+                const dueDate = convertDateFormat(data.dueAt);
+                if (dueDate) document.getElementById('dueDate1').value = dueDate;
+            }
+            
+            // Set interest type
+            const compoundRadio = document.querySelector('input[name="interestType"][value="compound"]');
+            const simpleRadio = document.querySelector('input[name="interestType"][value="simple"]');
+            
+            if (data.compoundInterest) {
+                compoundRadio.checked = true;
+            } else {
+                simpleRadio.checked = true;
+            }
+            
+            // Clear existing payments
+            const paymentsContainer = document.getElementById('payments-container');
+            paymentsContainer.innerHTML = '';
+            
+            // Add payments from CSV
+            data.payments.forEach(payment => {
+                addPaymentFromCSV(payment.amount, payment.date);
+            });
+            
+            // Trigger recalculation
+            calculateGracePeriod();
+        }
+        
+        function convertDateFormat(dateStr) {
+            // Convert M/D/YYYY to YYYY-MM-DD
+            const parts = dateStr.split('/');
+            if (parts.length === 3) {
+                const month = parts[0].padStart(2, '0');
+                const day = parts[1].padStart(2, '0');
+                const year = parts[2];
+                return `${year}-${month}-${day}`;
+            }
+            return null;
+        }
+        
+        function addPaymentFromCSV(amount, date) {
+            paymentCounter++;
+            const container = document.getElementById('payments-container');
+            const paymentRow = document.createElement('div');
+            paymentRow.id = `payment-row-${paymentCounter}`;
+            paymentRow.style.cssText = 'display: flex; gap: 10px; margin-bottom: 10px; align-items: center;';
+            
+            const convertedDate = convertDateFormat(date);
+            
+            paymentRow.innerHTML = `
+                <div style="display: flex; flex-direction: column;">
+                    <label style="font-size: 12px; margin-bottom: 2px;">Amount ($)</label>
+                    <input type="number" id="payment-amount-${paymentCounter}" step="0.01" value="${amount}" style="width: 120px; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">
+                </div>
+                <div style="display: flex; flex-direction: column;">
+                    <label style="font-size: 12px; margin-bottom: 2px;">Payment Date</label>
+                    <input type="date" id="payment-date-${paymentCounter}" value="${convertedDate || ''}" style="width: 140px; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">
+                </div>
+                <button type="button" onclick="removePaymentRow(${paymentCounter})" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin-top: 15px;">Remove</button>
+            `;
+            
+            container.appendChild(paymentRow);
+            addPaymentEventListeners(paymentCounter);
+        }
+        
+        function showCSVStatus(message, type) {
+            const statusDiv = document.getElementById('csvStatus');
+            statusDiv.style.display = 'block';
+            statusDiv.textContent = message;
+            
+            if (type === 'success') {
+                statusDiv.style.backgroundColor = '#d4edda';
+                statusDiv.style.color = '#155724';
+                statusDiv.style.border = '1px solid #c3e6cb';
+            } else if (type === 'error') {
+                statusDiv.style.backgroundColor = '#f8d7da';
+                statusDiv.style.color = '#721c24';
+                statusDiv.style.border = '1px solid #f5c6cb';
+            }
+        }
+        
+        function showCSVPreview(data) {
+            const previewDiv = document.getElementById('csvPreview');
+            previewDiv.style.display = 'block';
+            
+            let html = '<h4>Parsed Data Preview:</h4>';
+            html += `<p><strong>Principal:</strong> $${data.balance.toFixed(2)}</p>`;
+            html += `<p><strong>Interest Rate:</strong> ${(data.interestRate * 100).toFixed(3)}%</p>`;
+            html += `<p><strong>Interest Period:</strong> ${data.interestPeriod} days</p>`;
+            html += `<p><strong>Issue Date:</strong> ${data.issuedAt}</p>`;
+            html += `<p><strong>Due Date:</strong> ${data.dueAt}</p>`;
+            html += `<p><strong>Interest Type:</strong> ${data.compoundInterest ? 'Compound' : 'Simple'}</p>`;
+            
+            if (data.payments.length > 0) {
+                html += '<p><strong>Payments/Credits:</strong></p><ul>';
+                data.payments.forEach(payment => {
+                    html += `<li>$${payment.amount.toFixed(2)} on ${payment.date}</li>`;
+                });
+                html += '</ul>';
+            } else {
+                html += '<p><strong>Payments/Credits:</strong> None found</p>';
+            }
+            
+            previewDiv.innerHTML = html;
+        }
+
+            function calculatePeriodsToToday() {
+                const issueDateStr = document.getElementById('issueDate1').value;
+                const interval = parseInt(document.getElementById('interval1').value);
+                const gracePeriodDays = calculateDaysBetween(
+                    new Date(issueDateStr + 'T00:00:00'),
+                    new Date(document.getElementById('dueDate1').value + 'T00:00:00')
+                );
+                
+                if (!issueDateStr || !interval || interval <= 0) {
+                    alert('Please enter valid issue date and interest interval first.');
+                    return;
+                }
+                
+                const issueDate = new Date(issueDateStr + 'T00:00:00');
+                const today = new Date();
+                
+                // Calculate first interest date
+                let firstInterestDate;
+                if (gracePeriodDays === 0) {
+                    firstInterestDate = addDays(issueDate, interval + 1);
+                } else {
+                    const dueDate = new Date(document.getElementById('dueDate1').value + 'T00:00:00');
+                    firstInterestDate = addDays(dueDate, 1);
+                }
+                
+                // Calculate how many periods we need to reach today
+                if (today <= firstInterestDate) {
+                    // Today is before the first interest charge
+                    document.getElementById('periods1').value = 1;
+                } else {
+                    // Calculate number of periods from first interest date to today
+                    const daysSinceFirst = calculateDaysBetween(firstInterestDate, today);
+                    const additionalPeriods = Math.floor(daysSinceFirst / interval);
+                    const totalPeriods = 1 + additionalPeriods;
+                    document.getElementById('periods1').value = totalPeriods;
+                }
+                
+                // Trigger recalculation
+                calculateGracePeriod();
+            }
+
+            function calculateGracePeriod() {
             const rate = parseFloat(document.getElementById('rate1').value) / 100;
             const issueDateStr = document.getElementById('issueDate1').value;
             const dueDateStr = document.getElementById('dueDate1').value;
@@ -454,18 +753,18 @@
                                 : `With Grace period: Interest accrues from issue date to due date (${gracePeriodDays} days). First charge appears one day after the due date. Interest covers the ${accrualDays}-day grace period.`} ${interestType === 'simple' ? 'Simple interest uses the current principal' : 'Compound interest uses the current balance'} of $${principalUsed.toFixed(2)}.` :
                             `Subsequent interest charge: This is the ${event.periodName.toLowerCase()} period covering ${accrualDays} days based on the ${interval}-day interest interval. ${interestType === 'simple' ? 'Simple interest uses the current principal' : 'Compound interest uses the current balance'} of $${principalUsed.toFixed(2)}${interestType === 'compound' ? ', which includes all previous interest' : ', which may have been reduced by payments'}.`
                     };
-                    
-                    results.push({
+                
+                results.push({
                         type: 'interest',
                         period: event.periodName,
                         date: formatDate(event.date),
                         days: accrualDays,
-                        interest: interestAmount,
+                    interest: interestAmount,
                         balance: runningTotal + interestAmount,
                         calculationDetails: calculationDetails
-                    });
-                    
-                    runningTotal += interestAmount;
+                });
+                
+                runningTotal += interestAmount;
                     
                 } else if (event.type === 'payment') {
                     // Apply payment
@@ -530,7 +829,7 @@
             
             results.forEach(result => {
                 if (result.type === 'interest') {
-                    totalInterest += result.interest;
+                totalInterest += result.interest;
                     
                     // Create tooltip content for interest
                     const details = result.calculationDetails;
@@ -556,11 +855,11 @@
                         </div>
                     `;
                     
-                    html += `
-                        <tr>
-                            <td>${result.period}</td>
-                            <td>${result.date}</td>
-                            <td>${result.days}</td>
+                html += `
+                    <tr>
+                        <td>${result.period}</td>
+                        <td>${result.date}</td>
+                        <td>${result.days}</td>
                             <td>
                                 <div class="tooltip-container">
                                     $${result.interest.toFixed(2)}
@@ -592,9 +891,9 @@
                                     <div class="tooltip">${tooltipContent}</div>
                                 </div>
                             </td>
-                            <td>$${result.balance.toFixed(2)}</td>
-                        </tr>
-                    `;
+                        <td>$${result.balance.toFixed(2)}</td>
+                    </tr>
+                `;
                 }
                 
                 // Always track the balance from each transaction (this will be the final balance after the last transaction)
@@ -687,7 +986,7 @@
                 dateInput.addEventListener('change', calculateGracePeriod);
             }
         }
-
+        
         // Initialize with calculations on page load
         window.onload = function() {
             setupEventListeners();
