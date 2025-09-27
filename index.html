@@ -1395,6 +1395,35 @@
             // Trigger recalculation first
             calculateGracePeriod();
             
+            // Auto-click "Up to Today" to prepare for comparison
+            calculatePeriodsToToday();
+            
+            // Extract interest data from the same CSV for comparison
+            const csvFileInput = document.getElementById('csvFileInput');
+            if (csvFileInput && csvFileInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const csvText = e.target.result;
+                        const interestData = parseDiscrepancyCSVData(csvText);
+                        
+                        if (interestData && interestData.length > 0) {
+                            // Store the interest data and integrate it
+                            currentDiscrepancyData = interestData;
+                            
+                            // Small delay to ensure calculations are complete
+                            setTimeout(() => {
+                                integrateDiscrepancyData(interestData);
+                                showDiscrepancyStatus(`✅ Bill Inspector CSV loaded with ${interestData.length} interest charges for comparison`, 'success');
+                            }, 200);
+                        }
+                    } catch (error) {
+                        console.log('Could not extract interest data for comparison:', error.message);
+                    }
+                };
+                reader.readAsText(csvFileInput.files[0]);
+            }
+            
             // Switch to results tab to show the calculations
             switchTab('results');
         }
@@ -2833,9 +2862,10 @@
             const lines = csvText.split('\n');
             const interestCharges = [];
             
-            // Look for the header line to determine format
+            // Look for different CSV formats
             let headerIndex = -1;
             let isSimpleFormat = false;
+            let isBillInspectorFormat = false;
             
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim();
@@ -2844,15 +2874,15 @@
                     headerIndex = i;
                     isSimpleFormat = true;
                     break;
+                } else if (line.includes('Interest line items')) {
+                    // Bill Inspector format - has Interest line items section
+                    isBillInspectorFormat = true;
+                    break;
                 }
             }
             
-            if (headerIndex === -1) {
-                throw new Error('Could not find expected CSV header format');
-            }
-            
-            // Parse the data based on format
             if (isSimpleFormat) {
+                // Parse simple format (existing logic)
                 const headers = lines[headerIndex].split(',').map(h => h.replace(/"/g, '').trim());
                 const dateIndex = headers.indexOf('Date');
                 const totalIndex = headers.indexOf('Total');
@@ -2883,6 +2913,48 @@
                         }
                     }
                 }
+            } else if (isBillInspectorFormat) {
+                // Parse Bill Inspector format
+                const interestLineItemsStart = findSectionStart(lines, 'Interest line items');
+                if (interestLineItemsStart > 0 && interestLineItemsStart + 1 < lines.length) {
+                    // Get the header line for Interest line items
+                    const headerLine = lines[interestLineItemsStart + 1];
+                    const headers = headerLine.split(',');
+                    
+                    // Find relevant column indices
+                    const dateIndex = headers.findIndex(h => h.trim() === 'date');
+                    const priceIndex = headers.findIndex(h => h.trim() === 'price');
+                    const createdAtIndex = headers.findIndex(h => h.trim() === 'created_at');
+                    
+                    // Parse interest line items
+                    for (let i = interestLineItemsStart + 2; i < lines.length; i++) {
+                        const line = lines[i].trim();
+                        if (!line) break; // End of section
+                        
+                        const values = parseCSVLine(line);
+                        if (values.length > Math.max(dateIndex, priceIndex, createdAtIndex)) {
+                            const date = values[dateIndex] ? values[dateIndex].trim() : '';
+                            const amount = values[priceIndex] ? parseFloat(values[priceIndex]) : 0;
+                            
+                            if (date && !isNaN(amount) && amount > 0) {
+                                // Convert date format from YYYY-MM-DD to MM/DD/YYYY if needed
+                                let formattedDate = date;
+                                if (date.includes('-') && date.length === 10) {
+                                    const [year, month, day] = date.split('-');
+                                    formattedDate = `${month.padStart(2, '0')}/${day.padStart(2, '0')}/${year}`;
+                                }
+                                
+                                interestCharges.push({
+                                    date: formattedDate,
+                                    amount: amount,
+                                    description: 'Interest charge from Bill Inspector'
+                                });
+                            }
+                        }
+                    }
+                }
+            } else {
+                throw new Error('Could not find expected CSV header format. Supported formats: Simple Bill Export or Bill Inspector CSV');
             }
             
             return interestCharges;
@@ -3418,4 +3490,5 @@
         }
     </script>
 </body>
+</html>
 </html>
