@@ -1070,6 +1070,13 @@
                 selectedButton.classList.add('active');
             }
             
+            // Restore comparison state when switching to Results tab
+            if (tabName === 'results' && currentDiscrepancyData) {
+                setTimeout(() => {
+                    integrateDiscrepancyData(currentDiscrepancyData);
+                }, 100);
+            }
+            
             // Auto-switch to results tab when calculations are completed
             if (tabName === 'calculator' || tabName === 'payments') {
                 // Trigger recalculation to ensure results are up to date
@@ -3423,14 +3430,8 @@
         }
         
         function showDiscrepancySummary(comparison) {
-            // Summary is now integrated into the main table, just show status
-            const totalDiscrepancies = comparison.discrepancies.length + comparison.missing.length + comparison.extra.length;
-            
-            if (totalDiscrepancies === 0) {
-                showDiscrepancyStatus('✅ Perfect Match! All interest charges align correctly.', 'success');
-            } else {
-                showDiscrepancyStatus(`⚠️ Found ${totalDiscrepancies} discrepancies: ${comparison.matches.length} matches, ${comparison.discrepancies.length} discrepancies, ${comparison.missing.length} missing, ${comparison.extra.length} extra`, 'warning');
-            }
+            // Summary is now integrated into the main table with visual indicators
+            // No need for status banner - information is visible in the table
         }
         
         function clearDiscrepancyAnalysis() {
