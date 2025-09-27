@@ -859,28 +859,18 @@
                                 </button>
                                 <div style="display: flex; align-items: center; gap: 5px;">
                                     <input type="file" id="resultsDiscrepancyCsvInput" accept=".csv" style="display: none;">
-                                    <button onclick="document.getElementById('resultsDiscrepancyCsvInput').click()" style="background: #007bff; color: white; border: none; padding: 8px 15px; border-radius: 3px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 5px;">
+                                    <button onclick="handleCompareButtonClick()" style="background: #007bff; color: white; border: none; padding: 8px 15px; border-radius: 3px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 5px;">
                                         🔍 Compare Bill CSV
+                                    </button>
+                                    <button id="clearComparisonBtn" onclick="clearDiscrepancyAnalysis()" style="background: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 3px; cursor: pointer; font-size: 12px; display: none; align-items: center; gap: 5px;">
+                                        ✖️ Clear Comparison
                                     </button>
                                 </div>
                             </div>
                         </div>
                     </div>
+                    <div id="discrepancyStatus" style="margin: 10px 0; padding: 10px; border-radius: 3px; display: none;"></div>
                     <div id="results1-content"></div>
-                    
-                    <!-- Discrepancy Analysis Section -->
-                    <div id="discrepancyAnalysisSection" style="display: none; margin-top: 20px; padding: 15px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px;">
-                        <h4 style="margin-top: 0; color: #495057; display: flex; align-items: center; gap: 8px;">
-                            🔍 Interest Discrepancy Analysis
-                            <button onclick="clearDiscrepancyAnalysis()" style="background: #6c757d; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; margin-left: auto;">
-                                Clear
-                            </button>
-                        </h4>
-                        <div id="discrepancyStatus" style="margin-bottom: 10px; padding: 8px; border-radius: 3px; display: none;"></div>
-                        <div id="discrepancySummary" style="margin-bottom: 15px;">
-                            <!-- Summary will be populated here -->
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -895,11 +885,11 @@
         let customEntries = []; // Track custom entries added to results
         let currentInsertRowIndex = -1; // Track which row is currently being inserted
         let currentDiscrepancyData = null; // Store current discrepancy data for refreshes
+        let hasUsedUpToToday = false; // Track if "Up to Today" button has been clicked
         
         // Refresh discrepancy analysis if it's currently active
         function refreshDiscrepancyAnalysis() {
-            const analysisSection = document.getElementById('discrepancyAnalysisSection');
-            if (analysisSection && analysisSection.style.display !== 'none' && currentDiscrepancyData) {
+            if (currentDiscrepancyData) {
                 // Use the stored discrepancy data to refresh the analysis
                 setTimeout(() => {
                     integrateDiscrepancyData(currentDiscrepancyData);
@@ -1524,11 +1514,19 @@
                     document.getElementById('periods1').value = totalPeriods;
                 }
                 
-                // Trigger recalculation
-                calculateGracePeriod();
+                // Trigger recalculation with flag to indicate this is from "Up to Today"
+                calculateGracePeriod(true);
+                
+                // Set flag to indicate "Up to Today" has been used
+                hasUsedUpToToday = true;
             }
 
-            function calculateGracePeriod() {
+            function calculateGracePeriod(fromUpToToday = false) {
+            // Reset the "Up to Today" flag when calculations change (unless called from "Up to Today")
+            if (!fromUpToToday) {
+                hasUsedUpToToday = false;
+            }
+            
             const rate = parseFloat(document.getElementById('rate1').value) / 100;
             const issueDateStr = document.getElementById('issueDate1').value;
             const dueDateStr = document.getElementById('dueDate1').value;
@@ -3127,12 +3125,31 @@
             calculateGracePeriod();
         };
         
+        // Handle Compare Bill CSV button click with validation
+        function handleCompareButtonClick() {
+            if (!hasUsedUpToToday) {
+                showDiscrepancyStatus('⚠️ Please click "Up to Today" button first to ensure all interest charges are calculated for accurate comparison.', 'warning');
+                return;
+            }
+            
+            // If validation passes, trigger the file input
+            document.getElementById('resultsDiscrepancyCsvInput').click();
+        }
+        
         // Setup integrated discrepancy checking in results tab
         function setupResultsDiscrepancyUpload() {
             const fileInput = document.getElementById('resultsDiscrepancyCsvInput');
             if (fileInput) {
                 fileInput.addEventListener('change', function(e) {
                     if (e.target.files.length > 0) {
+                        // Validate that "Up to Today" has been used
+                        if (!hasUsedUpToToday) {
+                            showDiscrepancyStatus('⚠️ Please click "Up to Today" button first to ensure all interest charges are calculated for accurate comparison.', 'warning');
+                            // Clear the file input to prevent processing
+                            e.target.value = '';
+                            return;
+                        }
+                        
                         processResultsDiscrepancyFile(e.target.files[0]);
                     }
                 });
@@ -3178,12 +3195,6 @@
             const comparison = compareInterestCharges(actualCharges, calculatedCharges);
             updateResultsTableWithActual(actualCharges, comparison);
             showDiscrepancySummary(comparison);
-            
-            // Show the discrepancy analysis section
-            const analysisSection = document.getElementById('discrepancyAnalysisSection');
-            if (analysisSection) {
-                analysisSection.style.display = 'block';
-            }
         }
         
         function showActualColumn() {
@@ -3198,6 +3209,21 @@
             actualCells.forEach(cell => {
                 cell.style.display = 'table-cell';
             });
+            
+            // Disable the periods input to prevent breaking the comparison
+            const periodsInput = document.getElementById('periods1');
+            if (periodsInput) {
+                periodsInput.disabled = true;
+                periodsInput.style.backgroundColor = '#e9ecef';
+                periodsInput.style.color = '#6c757d';
+                periodsInput.title = 'Disabled during CSV comparison to maintain data integrity';
+            }
+            
+            // Show the Clear Comparison button
+            const clearBtn = document.getElementById('clearComparisonBtn');
+            if (clearBtn) {
+                clearBtn.style.display = 'flex';
+            }
         }
         
         function updateResultsTableWithActual(actualCharges, comparison) {
@@ -3260,52 +3286,14 @@
         }
         
         function showDiscrepancySummary(comparison) {
-            const summaryDiv = document.getElementById('discrepancySummary');
-            if (!summaryDiv) return;
-            
+            // Summary is now integrated into the main table, just show status
             const totalDiscrepancies = comparison.discrepancies.length + comparison.missing.length + comparison.extra.length;
             
-            let summaryHtml = `
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 10px;">
-                    <div style="text-align: center; padding: 8px; background: #d4edda; border-radius: 4px; border: 1px solid #c3e6cb;">
-                        <div style="font-size: 18px; font-weight: bold; color: #155724;">${comparison.matches.length}</div>
-                        <div style="color: #155724; font-size: 12px;">Matches</div>
-                    </div>
-                    <div style="text-align: center; padding: 8px; background: #f8d7da; border-radius: 4px; border: 1px solid #f5c6cb;">
-                        <div style="font-size: 18px; font-weight: bold; color: #721c24;">${comparison.discrepancies.length}</div>
-                        <div style="color: #721c24; font-size: 12px;">Discrepancies</div>
-                    </div>
-                    <div style="text-align: center; padding: 8px; background: #fff3cd; border-radius: 4px; border: 1px solid #ffeaa7;">
-                        <div style="font-size: 18px; font-weight: bold; color: #856404;">${comparison.missing.length}</div>
-                        <div style="color: #856404; font-size: 12px;">Missing</div>
-                    </div>
-                    <div style="text-align: center; padding: 8px; background: #d1ecf1; border-radius: 4px; border: 1px solid #bee5eb;">
-                        <div style="font-size: 18px; font-weight: bold; color: #0c5460;">${comparison.extra.length}</div>
-                        <div style="color: #0c5460; font-size: 12px;">Extra</div>
-                    </div>
-                </div>
-            `;
-            
             if (totalDiscrepancies === 0) {
-                summaryHtml += `<div style="text-align: center; padding: 10px; background: #d4edda; color: #155724; border-radius: 4px; font-weight: bold;">🎉 Perfect Match! All interest charges align correctly.</div>`;
+                showDiscrepancyStatus('✅ Perfect Match! All interest charges align correctly.', 'success');
             } else {
-                summaryHtml += `<div style="text-align: center; padding: 10px; background: #fff3cd; color: #856404; border-radius: 4px; font-weight: bold;">⚠️ Found ${totalDiscrepancies} discrepancies requiring attention</div>`;
+                showDiscrepancyStatus(`⚠️ Found ${totalDiscrepancies} discrepancies: ${comparison.matches.length} matches, ${comparison.discrepancies.length} discrepancies, ${comparison.missing.length} missing, ${comparison.extra.length} extra`, 'warning');
             }
-            
-            // Add missing/extra charges details
-            if (comparison.missing.length > 0) {
-                summaryHtml += `<div style="margin-top: 10px; padding: 8px; background: #fff3cd; border-radius: 4px; border-left: 4px solid #ffc107;">
-                    <strong>Missing Charges:</strong> ${comparison.missing.map(m => `${m.date} ($${m.amount.toFixed(2)})`).join(', ')}
-                </div>`;
-            }
-            
-            if (comparison.extra.length > 0) {
-                summaryHtml += `<div style="margin-top: 10px; padding: 8px; background: #d1ecf1; border-radius: 4px; border-left: 4px solid #17a2b8;">
-                    <strong>Extra Charges:</strong> ${comparison.extra.map(e => `${e.date} ($${e.amount.toFixed(2)})`).join(', ')}
-                </div>`;
-            }
-            
-            summaryDiv.innerHTML = summaryHtml;
         }
         
         function clearDiscrepancyAnalysis() {
@@ -3320,6 +3308,21 @@
                 cell.style.display = 'none';
             });
             
+            // Re-enable the periods input
+            const periodsInput = document.getElementById('periods1');
+            if (periodsInput) {
+                periodsInput.disabled = false;
+                periodsInput.style.backgroundColor = '';
+                periodsInput.style.color = '';
+                periodsInput.title = '';
+            }
+            
+            // Hide the Clear Comparison button
+            const clearBtn = document.getElementById('clearComparisonBtn');
+            if (clearBtn) {
+                clearBtn.style.display = 'none';
+            }
+            
             // Clear row highlighting
             const rows = document.querySelectorAll('.results-table tbody tr');
             rows.forEach(row => {
@@ -3329,12 +3332,6 @@
                     row.style.backgroundColor = '';
                 }
             });
-            
-            // Hide the analysis section
-            const analysisSection = document.getElementById('discrepancyAnalysisSection');
-            if (analysisSection) {
-                analysisSection.style.display = 'none';
-            }
             
             // Clear the file input and stored data
             const fileInput = document.getElementById('resultsDiscrepancyCsvInput');
