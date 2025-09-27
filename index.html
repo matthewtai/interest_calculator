@@ -853,14 +853,34 @@
                                 <input type="number" id="periods1" min="1" value="5" style="width: 80px; padding: 5px; border: 1px solid #ccc; border-radius: 3px; margin-right: 10px;">
                                 <button onclick="calculatePeriodsToToday()" style="background: #17a2b8; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px;">Up to Today</button>
                             </div>
-                            <div>
+                            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                                 <button onclick="exportResultsToCSV()" style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 3px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 5px;">
                                     📊 Export CSV
                                 </button>
+                                <div style="display: flex; align-items: center; gap: 5px;">
+                                    <input type="file" id="resultsDiscrepancyCsvInput" accept=".csv" style="display: none;">
+                                    <button onclick="document.getElementById('resultsDiscrepancyCsvInput').click()" style="background: #007bff; color: white; border: none; padding: 8px 15px; border-radius: 3px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 5px;">
+                                        🔍 Compare Bill CSV
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div id="results1-content"></div>
+                    
+                    <!-- Discrepancy Analysis Section -->
+                    <div id="discrepancyAnalysisSection" style="display: none; margin-top: 20px; padding: 15px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px;">
+                        <h4 style="margin-top: 0; color: #495057; display: flex; align-items: center; gap: 8px;">
+                            🔍 Interest Discrepancy Analysis
+                            <button onclick="clearDiscrepancyAnalysis()" style="background: #6c757d; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; margin-left: auto;">
+                                Clear
+                            </button>
+                        </h4>
+                        <div id="discrepancyStatus" style="margin-bottom: 10px; padding: 8px; border-radius: 3px; display: none;"></div>
+                        <div id="discrepancySummary" style="margin-bottom: 15px;">
+                            <!-- Summary will be populated here -->
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -874,6 +894,18 @@
         let paymentModifications = new Map(); // Track modifications
         let customEntries = []; // Track custom entries added to results
         let currentInsertRowIndex = -1; // Track which row is currently being inserted
+        let currentDiscrepancyData = null; // Store current discrepancy data for refreshes
+        
+        // Refresh discrepancy analysis if it's currently active
+        function refreshDiscrepancyAnalysis() {
+            const analysisSection = document.getElementById('discrepancyAnalysisSection');
+            if (analysisSection && analysisSection.style.display !== 'none' && currentDiscrepancyData) {
+                // Use the stored discrepancy data to refresh the analysis
+                setTimeout(() => {
+                    integrateDiscrepancyData(currentDiscrepancyData);
+                }, 100); // Small delay to ensure calculations are complete
+            }
+        }
         
         function addPaymentRow() {
             paymentCounter++;
@@ -906,6 +938,9 @@
                 row.remove();
                 // Recalculate after removing payment
                 calculateGracePeriod();
+                
+                // Refresh discrepancy analysis if active
+                refreshDiscrepancyAnalysis();
             }
         }
         
@@ -1729,6 +1764,7 @@
                             <th>Date</th>
                             <th>Days</th>
                             <th>Interest <span class="tooltip-icon" title="Hover over interest amounts to see detailed calculations">?</span></th>
+                            <th id="actualColumn" style="display: none;">Actual</th>
                             <th>Running Balance</th>
                         </tr>
                     </thead>
@@ -1776,6 +1812,10 @@
                                     $${result.interest.toFixed(2)}
                                     <div class="tooltip">${tooltipContent}</div>
                                 </div>
+                            </td>
+                            <td class="actual-column" style="display: none;" data-date="${result.date}">
+                                <span class="actual-amount">-</span>
+                                <span class="comparison-indicator" style="margin-left: 5px;"></span>
                             </td>
                             <td style="position: relative;">
                                 $${result.balance.toFixed(2)}
@@ -1852,6 +1892,7 @@
                                     <div class="tooltip">${tooltipContent}</div>
                                 </div>
                             </td>
+                            <td class="actual-column" style="display: none;">-</td>
                             <td style="position: relative;">
                                 $${result.balance.toFixed(2)}
                                 <button class="insert-add-btn" onclick="showInsertForm(${results.indexOf(result)})" title="Add entry after this row">+</button>
@@ -1873,111 +1914,45 @@
                         `+$${result.customAmount.toFixed(2)}` : 
                         `-$${Math.abs(result.customAmount).toFixed(2)}`;
                     
-                    // Check if this custom entry was modified
+                    // Custom entries don't need modification tracking since they're user-created
                     const customKey = `custom-${result.id}`;
-                    const customModification = paymentModifications.get(customKey);
-                    const hasCustomModification = customModification && (customModification.description || customModification.date || customModification.amount);
+                    const customModificationClass = '';
+                    const customChangeIndicator = '';
                     
-                    const customModificationClass = hasCustomModification ? 'payment-row-modified' : '';
-                    const customChangeIndicator = hasCustomModification ? '<span class="change-indicator">MODIFIED</span>' : '';
-                    
-                    // Store original custom entry data if not already stored
-                    if (!originalPaymentData.has(customKey)) {
-                        originalPaymentData.set(customKey, {
-                            description: result.period,
-                            date: result.date,
-                            amount: result.customAmount,
-                            originalDescription: result.period,
-                            originalDate: result.date,
-                            originalAmount: result.customAmount
-                        });
-                    }
+                    // No need to store original data for custom entries since we don't track modifications
                     
                     let customDescriptionHtml, customDateHtml, customAmountHtml;
                     
-                    // Description field
-                    if (hasCustomModification && customModification.description) {
-                        customDescriptionHtml = `
-                            <div style="margin-bottom: 5px;">
-                                <input type="text" 
-                                       class="editable-input custom-description-edit" 
-                                       value="${customModification.description}"
-                                       data-custom-key="${customKey}"
-                                       onchange="updateCustomEntryFromTable('${customKey}', 'description', this.value)"
-                                       style="width: 100%;">
-                            </div>
-                            <div style="font-size: 11px; color: #6c757d; font-style: italic;">
-                                Original: ${customModification.originalDescription}
-                            </div>
-                        `;
-                    } else {
-                        customDescriptionHtml = `
-                            <input type="text" 
-                                   class="editable-input custom-description-edit" 
-                                   value="${result.period}"
-                                   data-custom-key="${customKey}"
-                                   onchange="updateCustomEntryFromTable('${customKey}', 'description', this.value)"
-                                   style="width: 100%;">
-                        `;
-                    }
+                    // Description field - always editable without modification tracking
+                    customDescriptionHtml = `
+                        <input type="text" 
+                               class="editable-input custom-description-edit" 
+                               value="${result.period}"
+                               data-custom-key="${customKey}"
+                               onchange="updateCustomEntryFromTable('${customKey}', 'description', this.value)"
+                               style="width: 100%;">
+                    `;
                     
-                    // Date field
-                    if (hasCustomModification && customModification.date) {
-                        customDateHtml = `
-                            <div style="margin-bottom: 5px;">
-                                <input type="text" 
-                                       class="editable-input custom-date-edit" 
-                                       value="${formatDate(customModification.date)}"
-                                       placeholder="MM/DD/YYYY"
-                                       data-custom-key="${customKey}"
-                                       onchange="updateCustomEntryFromTable('${customKey}', 'date', this.value)">
-                            </div>
-                            <div style="font-size: 11px; color: #6c757d; font-style: italic;">
-                                Original: ${customModification.originalDate}
-                            </div>
-                        `;
-                    } else {
-                        customDateHtml = `
-                            <input type="text" 
-                                   class="editable-input custom-date-edit" 
-                                   value="${result.date}"
-                                   placeholder="MM/DD/YYYY"
-                                   data-custom-key="${customKey}"
-                                   onchange="updateCustomEntryFromTable('${customKey}', 'date', this.value)">
-                        `;
-                    }
+                    // Date field - always editable without modification tracking
+                    customDateHtml = `
+                        <input type="text" 
+                               class="editable-input custom-date-edit" 
+                               value="${result.date}"
+                               placeholder="MM/DD/YYYY"
+                               data-custom-key="${customKey}"
+                               onchange="updateCustomEntryFromTable('${customKey}', 'date', this.value)">
+                    `;
                     
-                    // Amount field
-                    if (hasCustomModification && customModification.amount !== undefined) {
-                        const modifiedAmountDisplay = customModification.amount >= 0 ? 
-                            `+$${customModification.amount.toFixed(2)}` : 
-                            `-$${Math.abs(customModification.amount).toFixed(2)}`;
-                        
-                        customAmountHtml = `
-                            <div style="margin-bottom: 5px;">
-                                <input type="number" 
-                                       class="editable-input custom-amount-edit" 
-                                       value="${customModification.amount.toFixed(2)}"
-                                       step="0.01"
-                                       data-custom-key="${customKey}"
-                                       onchange="updateCustomEntryFromTable('${customKey}', 'amount', this.value)"
-                                       style="width: 80px; display: inline-block;">
-                            </div>
-                            <div style="font-size: 11px; color: #6c757d; font-style: italic;">
-                                Original: ${result.customAmount >= 0 ? '+' : ''}$${Math.abs(result.customAmount).toFixed(2)}
-                            </div>
-                        `;
-                    } else {
-                        customAmountHtml = `
-                            <input type="number" 
-                                   class="editable-input custom-amount-edit" 
-                                   value="${result.customAmount.toFixed(2)}"
-                                   step="0.01"
-                                   data-custom-key="${customKey}"
-                                   onchange="updateCustomEntryFromTable('${customKey}', 'amount', this.value)"
-                                   style="width: 80px; display: inline-block;">
-                        `;
-                    }
+                    // Amount field - always editable without modification tracking
+                    customAmountHtml = `
+                        <input type="number" 
+                               class="editable-input custom-amount-edit" 
+                               value="${result.customAmount.toFixed(2)}"
+                               step="0.01"
+                               data-custom-key="${customKey}"
+                               onchange="updateCustomEntryFromTable('${customKey}', 'amount', this.value)"
+                               style="width: 80px; display: inline-block;">
+                    `;
                     
                     html += `
                         <tr class="custom-entry-row ${customModificationClass}" data-row-index="${results.indexOf(result)}" data-custom-key="${customKey}" style="position: relative;">
@@ -1990,6 +1965,7 @@
                                     <div class="tooltip">${tooltipContent}</div>
                                 </div>
                             </td>
+                            <td class="actual-column" style="display: none;">-</td>
                             <td style="position: relative;">
                                 $${result.balance.toFixed(2)}
                                 <button class="insert-delete-btn" onclick="deleteCustomEntry('${result.id}')" title="Delete this custom entry">−</button>
@@ -2188,6 +2164,9 @@
             
             // Recalculate results
             calculateGracePeriod();
+            
+            // Refresh discrepancy analysis if active
+            refreshDiscrepancyAnalysis();
         }
         
         // Update payment in the main payments container
@@ -2281,21 +2260,38 @@
             
             if (!targetRow) return;
             
+            // Get the date from the target row (2nd column)
+            const targetDateCell = targetRow.querySelector('td:nth-child(2)');
+            let defaultDate = formatDate(new Date()); // fallback to today
+            
+            if (targetDateCell) {
+                // Check if there's an input field (for payment rows)
+                const dateInput = targetDateCell.querySelector('input');
+                let targetDateText;
+                
+                if (dateInput) {
+                    targetDateText = dateInput.value.trim();
+                } else {
+                    targetDateText = targetDateCell.textContent.trim();
+                }
+                
+                // Check if it's a valid date format and not a header
+                if (targetDateText && targetDateText !== 'Date' && targetDateText.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+                    defaultDate = targetDateText;
+                }
+            }
+            
             // Create insert form row
             const insertRow = document.createElement('tr');
             insertRow.className = 'insert-form-row';
             insertRow.id = 'insert-form-row';
-            
-            const today = new Date().toISOString().split('T')[0];
-            
-            const todayFormatted = formatDate(new Date());
             
             insertRow.innerHTML = `
                 <td>
                     <input type="text" class="insert-form-input" id="insert-description" placeholder="Description">
                 </td>
                 <td>
-                    <input type="text" class="insert-form-input" id="insert-date" value="${todayFormatted}" placeholder="MM/DD/YYYY">
+                    <input type="text" class="insert-form-input" id="insert-date" value="${defaultDate}" placeholder="MM/DD/YYYY">
                 </td>
                 <td>
                     -
@@ -2377,77 +2373,23 @@
             // Hide form and recalculate
             hideInsertForm();
             calculateGracePeriod();
+            
+            // Refresh discrepancy analysis if active
+            refreshDiscrepancyAnalysis();
         }
         
         // Update custom entry from table edit
         function updateCustomEntryFromTable(customKey, field, newValue) {
             if (!newValue && field !== 'amount') return;
             
-            const originalData = originalPaymentData.get(customKey);
-            if (!originalData) return;
-            
-            // Store the modification
-            if (!paymentModifications.has(customKey)) {
-                paymentModifications.set(customKey, {});
-            }
-            
-            const modification = paymentModifications.get(customKey);
-            
-            if (field === 'description') {
-                if (newValue !== originalData.originalDescription) {
-                    modification.description = newValue;
-                    modification.originalDescription = originalData.originalDescription;
-                } else {
-                    delete modification.description;
-                    delete modification.originalDescription;
-                }
-            } else if (field === 'date') {
-                let newDate;
-                // Parse MM/DD/YYYY format
-                if (newValue.includes('/')) {
-                    const parts = newValue.split('/');
-                    if (parts.length === 3) {
-                        const month = parseInt(parts[0], 10);
-                        const day = parseInt(parts[1], 10);
-                        const year = parseInt(parts[2], 10);
-                        newDate = new Date(year, month - 1, day);
-                    } else {
-                        return; // Invalid format
-                    }
-                } else {
-                    newDate = new Date(newValue + 'T00:00:00');
-                }
-                
-                const originalDate = new Date(originalData.originalDate);
-                
-                if (newDate.getTime() !== originalDate.getTime()) {
-                    modification.date = newDate;
-                    modification.originalDate = originalData.originalDate;
-                } else {
-                    delete modification.date;
-                    delete modification.originalDate;
-                }
-            } else if (field === 'amount') {
-                const newAmount = parseFloat(newValue);
-                if (newAmount !== originalData.originalAmount) {
-                    modification.amount = newAmount;
-                    modification.originalAmount = originalData.originalAmount;
-                } else {
-                    delete modification.amount;
-                    delete modification.originalAmount;
-                }
-            }
-            
-            // If no modifications remain, remove the entry
-            if (Object.keys(modification).length === 0) {
-                paymentModifications.delete(customKey);
-            }
-            
-            // Update the actual custom entry data
+            // For custom entries, directly update the data without modification tracking
             updateCustomEntryData(customKey, field, newValue);
             
             // Recalculate results
             calculateGracePeriod();
+            
+            // Refresh discrepancy analysis if active
+            refreshDiscrepancyAnalysis();
         }
         
         // Update custom entry data in the customEntries array
@@ -2490,6 +2432,9 @@
                 
                 // Recalculate results
                 calculateGracePeriod();
+                
+                // Refresh discrepancy analysis if active
+                refreshDiscrepancyAnalysis();
             }
         }
         
@@ -2733,12 +2678,673 @@
             }
         }
         
+        // Discrepancy checker functionality
+        let discrepancyData = null;
+        let calculatedResults = null;
+        
+        function initializeDiscrepancyDragAndDrop() {
+            const uploadZone = document.getElementById('discrepancyUploadZone');
+            const fileInput = document.getElementById('discrepancyCsvFileInput');
+            
+            if (!uploadZone || !fileInput) return;
+            
+            // Drag and drop events
+            uploadZone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                uploadZone.style.backgroundColor = '#e8f4fd';
+                uploadZone.style.borderColor = '#007bff';
+            });
+            
+            uploadZone.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                uploadZone.style.backgroundColor = '';
+                uploadZone.style.borderColor = '';
+            });
+            
+            uploadZone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadZone.style.backgroundColor = '';
+                uploadZone.style.borderColor = '';
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0 && files[0].type === 'text/csv') {
+                    handleDiscrepancyFile(files[0]);
+                }
+            });
+            
+            // Click to upload
+            uploadZone.addEventListener('click', function() {
+                fileInput.click();
+            });
+            
+            fileInput.addEventListener('change', function(e) {
+                if (e.target.files.length > 0) {
+                    handleDiscrepancyFile(e.target.files[0]);
+                }
+            });
+        }
+        
+        function handleDiscrepancyFile(file) {
+            const fileInfo = document.getElementById('discrepancyFileInfo');
+            const fileName = document.getElementById('discrepancyFileName');
+            const fileSize = document.getElementById('discrepancyFileSize');
+            const parseSection = document.getElementById('discrepancyParseSection');
+            
+            fileName.textContent = file.name;
+            fileSize.textContent = (file.size / 1024).toFixed(2) + ' KB';
+            fileInfo.style.display = 'block';
+            parseSection.style.display = 'block';
+            
+            // Store the file for parsing
+            window.discrepancyFile = file;
+        }
+        
+        function parseDiscrepancyCSV() {
+            if (!window.discrepancyFile) {
+                showDiscrepancyStatus('No file selected', 'error');
+                return;
+            }
+            
+            // Check if we have calculated results
+            const resultsContent = document.getElementById('results1-content');
+            if (!resultsContent || !resultsContent.innerHTML.trim()) {
+                showDiscrepancyStatus('Please calculate interest charges first using the Calculator tab', 'error');
+                return;
+            }
+            
+            showDiscrepancyStatus('Parsing CSV file...', 'info');
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const csvText = e.target.result;
+                    const parsedData = parseDiscrepancyCSVData(csvText);
+                    
+                    if (parsedData && parsedData.length > 0) {
+                        discrepancyData = parsedData;
+                        showDiscrepancyPreview(parsedData);
+                        analyzeDiscrepancies();
+                    } else {
+                        showDiscrepancyStatus('No interest charges found in CSV file', 'warning');
+                    }
+                } catch (error) {
+                    showDiscrepancyStatus('Error parsing CSV file: ' + error.message, 'error');
+                }
+            };
+            
+            reader.readAsText(window.discrepancyFile);
+        }
+        
+        function parseDiscrepancyCSVData(csvText) {
+            const lines = csvText.split('\n');
+            const interestCharges = [];
+            
+            // Look for the header line to determine format
+            let headerIndex = -1;
+            let isSimpleFormat = false;
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line.includes('Bill ID') && line.includes('Date') && line.includes('Total')) {
+                    // Simple bill export format (like 236548126.csv)
+                    headerIndex = i;
+                    isSimpleFormat = true;
+                    break;
+                }
+            }
+            
+            if (headerIndex === -1) {
+                throw new Error('Could not find expected CSV header format');
+            }
+            
+            // Parse the data based on format
+            if (isSimpleFormat) {
+                const headers = lines[headerIndex].split(',').map(h => h.replace(/"/g, '').trim());
+                const dateIndex = headers.indexOf('Date');
+                const totalIndex = headers.indexOf('Total');
+                const activityIndex = headers.indexOf('Activity');
+                const descriptionIndex = headers.indexOf('Description');
+                
+                for (let i = headerIndex + 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+                    
+                    const values = parseCSVLine(line);
+                    if (values.length <= Math.max(dateIndex, totalIndex, activityIndex, descriptionIndex)) continue;
+                    
+                    const activity = values[activityIndex] ? values[activityIndex].replace(/"/g, '').trim() : '';
+                    const description = values[descriptionIndex] ? values[descriptionIndex].replace(/"/g, '').trim() : '';
+                    
+                    // Look for interest charges
+                    if (activity === 'Interest' || description.toLowerCase().includes('interest')) {
+                        const date = values[dateIndex] ? values[dateIndex].replace(/"/g, '').trim() : '';
+                        const total = values[totalIndex] ? parseFloat(values[totalIndex].replace(/"/g, '').replace(/[,$]/g, '')) : 0;
+                        
+                        if (date && !isNaN(total) && total > 0) {
+                            interestCharges.push({
+                                date: date,
+                                amount: total,
+                                description: description || 'Interest charge'
+                            });
+                        }
+                    }
+                }
+            }
+            
+            return interestCharges;
+        }
+        
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            
+            result.push(current);
+            return result;
+        }
+        
+        function showDiscrepancyStatus(message, type) {
+            const status = document.getElementById('discrepancyStatus');
+            status.style.display = 'block';
+            status.textContent = message;
+            
+            // Reset classes
+            status.className = '';
+            
+            if (type === 'error') {
+                status.style.backgroundColor = '#f8d7da';
+                status.style.color = '#721c24';
+                status.style.borderLeft = '4px solid #dc3545';
+            } else if (type === 'success') {
+                status.style.backgroundColor = '#d4edda';
+                status.style.color = '#155724';
+                status.style.borderLeft = '4px solid #28a745';
+            } else if (type === 'warning') {
+                status.style.backgroundColor = '#fff3cd';
+                status.style.color = '#856404';
+                status.style.borderLeft = '4px solid #ffc107';
+            } else {
+                status.style.backgroundColor = '#d1ecf1';
+                status.style.color = '#0c5460';
+                status.style.borderLeft = '4px solid #17a2b8';
+            }
+        }
+        
+        function showDiscrepancyPreview(data) {
+            const preview = document.getElementById('discrepancyPreview');
+            preview.style.display = 'block';
+            
+            let html = `<h4>Found ${data.length} interest charge(s) in CSV:</h4><ul>`;
+            data.forEach(charge => {
+                html += `<li><strong>${charge.date}:</strong> $${charge.amount.toFixed(2)} - ${charge.description}</li>`;
+            });
+            html += '</ul>';
+            
+            preview.innerHTML = html;
+            showDiscrepancyStatus(`Successfully parsed ${data.length} interest charges from CSV`, 'success');
+        }
+        
+        function analyzeDiscrepancies() {
+            if (!discrepancyData) return;
+            
+            // Get calculated results from the results table
+            const calculatedCharges = getCalculatedInterestCharges();
+            
+            if (!calculatedCharges || calculatedCharges.length === 0) {
+                showDiscrepancyStatus('No calculated interest charges found. Please run calculations first.', 'error');
+                return;
+            }
+            
+            // Compare actual vs calculated
+            const comparison = compareInterestCharges(discrepancyData, calculatedCharges);
+            displayDiscrepancyResults(comparison);
+        }
+        
+        function getCalculatedInterestCharges() {
+            const results = [];
+            const table = document.querySelector('#results1-content .results-table tbody');
+            
+            if (!table) return results;
+            
+            const rows = table.querySelectorAll('tr:not(.insert-form-row)');
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 4) {
+                    const dateCell = cells[1];
+                    const interestCell = cells[3]; // Fixed: Interest is in column 3, not 4
+                    
+                    if (dateCell && interestCell) {
+                        const date = dateCell.textContent.trim();
+                        const interestText = interestCell.textContent.trim();
+                        
+                        // Handle both simple $XX.XX format and tooltip container format
+                        let interestMatch = interestText.match(/\$([0-9,]+\.?[0-9]*)/);
+                        
+                        if (interestMatch && date !== 'Date') {
+                            const amount = parseFloat(interestMatch[1].replace(/,/g, ''));
+                            if (!isNaN(amount) && amount > 0) {
+                                results.push({
+                                    date: date,
+                                    amount: amount,
+                                    type: 'calculated'
+                                });
+                            }
+                        }
+                    }
+                }
+            });
+            
+            return results;
+        }
+        
+        function compareInterestCharges(actualCharges, calculatedCharges) {
+            const comparison = {
+                matches: [],
+                discrepancies: [],
+                missing: [],
+                extra: []
+            };
+            
+            // Create maps for easier comparison
+            const actualMap = new Map();
+            actualCharges.forEach(charge => {
+                const key = charge.date;
+                actualMap.set(key, charge);
+            });
+            
+            const calculatedMap = new Map();
+            calculatedCharges.forEach(charge => {
+                const key = charge.date;
+                calculatedMap.set(key, charge);
+            });
+            
+            // Compare calculated vs actual
+            calculatedCharges.forEach(calc => {
+                const actual = actualMap.get(calc.date);
+                if (actual) {
+                    const difference = Math.abs(actual.amount - calc.amount);
+                    if (difference < 0.01) {
+                        comparison.matches.push({
+                            date: calc.date,
+                            calculated: calc.amount,
+                            actual: actual.amount,
+                            difference: 0
+                        });
+                    } else {
+                        comparison.discrepancies.push({
+                            date: calc.date,
+                            calculated: calc.amount,
+                            actual: actual.amount,
+                            difference: actual.amount - calc.amount
+                        });
+                    }
+                } else {
+                    comparison.missing.push(calc);
+                }
+            });
+            
+            // Find extra charges in actual that aren't in calculated
+            actualCharges.forEach(actual => {
+                if (!calculatedMap.has(actual.date)) {
+                    comparison.extra.push(actual);
+                }
+            });
+            
+            return comparison;
+        }
+        
+        function displayDiscrepancyResults(comparison) {
+            const resultsDiv = document.getElementById('discrepancyResults');
+            const summaryDiv = document.getElementById('discrepancySummary');
+            const tableDiv = document.getElementById('discrepancyTable');
+            
+            resultsDiv.style.display = 'block';
+            
+            // Create summary
+            const totalDiscrepancies = comparison.discrepancies.length + comparison.missing.length + comparison.extra.length;
+            let summaryHtml = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <div style="text-align: center; padding: 10px; background: #d4edda; border-radius: 4px;">
+                        <div style="font-size: 24px; font-weight: bold; color: #155724;">${comparison.matches.length}</div>
+                        <div style="color: #155724;">Matches</div>
+                    </div>
+                    <div style="text-align: center; padding: 10px; background: #f8d7da; border-radius: 4px;">
+                        <div style="font-size: 24px; font-weight: bold; color: #721c24;">${comparison.discrepancies.length}</div>
+                        <div style="color: #721c24;">Discrepancies</div>
+                    </div>
+                    <div style="text-align: center; padding: 10px; background: #fff3cd; border-radius: 4px;">
+                        <div style="font-size: 24px; font-weight: bold; color: #856404;">${comparison.missing.length}</div>
+                        <div style="color: #856404;">Missing Charges</div>
+                    </div>
+                    <div style="text-align: center; padding: 10px; background: #d1ecf1; border-radius: 4px;">
+                        <div style="font-size: 24px; font-weight: bold; color: #0c5460;">${comparison.extra.length}</div>
+                        <div style="color: #0c5460;">Extra Charges</div>
+                    </div>
+                </div>
+            `;
+            
+            summaryDiv.innerHTML = summaryHtml;
+            
+            // Create detailed table
+            let tableHtml = `
+                <table class="results-table" style="width: 100%; margin-top: 15px;">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Calculated</th>
+                            <th>Actual</th>
+                            <th>Difference</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            // Add matches
+            comparison.matches.forEach(match => {
+                tableHtml += `
+                    <tr style="background-color: #d4edda;">
+                        <td>${match.date}</td>
+                        <td>$${match.calculated.toFixed(2)}</td>
+                        <td>$${match.actual.toFixed(2)}</td>
+                        <td>$0.00</td>
+                        <td style="color: #155724; font-weight: bold;">✓ Match</td>
+                    </tr>
+                `;
+            });
+            
+            // Add discrepancies
+            comparison.discrepancies.forEach(disc => {
+                const diffColor = disc.difference > 0 ? '#721c24' : '#0c5460';
+                const diffSymbol = disc.difference > 0 ? '+' : '';
+                tableHtml += `
+                    <tr style="background-color: #f8d7da;">
+                        <td>${disc.date}</td>
+                        <td>$${disc.calculated.toFixed(2)}</td>
+                        <td>$${disc.actual.toFixed(2)}</td>
+                        <td style="color: ${diffColor}; font-weight: bold;">${diffSymbol}$${disc.difference.toFixed(2)}</td>
+                        <td style="color: #721c24; font-weight: bold;">⚠ Discrepancy</td>
+                    </tr>
+                `;
+            });
+            
+            // Add missing charges
+            comparison.missing.forEach(missing => {
+                tableHtml += `
+                    <tr style="background-color: #fff3cd;">
+                        <td>${missing.date}</td>
+                        <td>$${missing.amount.toFixed(2)}</td>
+                        <td>-</td>
+                        <td style="color: #856404; font-weight: bold;">-$${missing.amount.toFixed(2)}</td>
+                        <td style="color: #856404; font-weight: bold;">⚠ Missing</td>
+                    </tr>
+                `;
+            });
+            
+            // Add extra charges
+            comparison.extra.forEach(extra => {
+                tableHtml += `
+                    <tr style="background-color: #d1ecf1;">
+                        <td>${extra.date}</td>
+                        <td>-</td>
+                        <td>$${extra.amount.toFixed(2)}</td>
+                        <td style="color: #0c5460; font-weight: bold;">+$${extra.amount.toFixed(2)}</td>
+                        <td style="color: #0c5460; font-weight: bold;">ℹ Extra</td>
+                    </tr>
+                `;
+            });
+            
+            tableHtml += '</tbody></table>';
+            tableDiv.innerHTML = tableHtml;
+            
+            // Show final status
+            if (totalDiscrepancies === 0) {
+                showDiscrepancyStatus('✅ All interest charges match perfectly!', 'success');
+            } else {
+                showDiscrepancyStatus(`⚠ Found ${totalDiscrepancies} discrepancies that need attention`, 'warning');
+            }
+        }
+
         // Initialize with calculations on page load
         window.onload = function() {
             setupEventListeners();
             initializeDragAndDrop();
+            initializeDiscrepancyDragAndDrop();
+            setupResultsDiscrepancyUpload();
             calculateGracePeriod();
         };
+        
+        // Setup integrated discrepancy checking in results tab
+        function setupResultsDiscrepancyUpload() {
+            const fileInput = document.getElementById('resultsDiscrepancyCsvInput');
+            if (fileInput) {
+                fileInput.addEventListener('change', function(e) {
+                    if (e.target.files.length > 0) {
+                        processResultsDiscrepancyFile(e.target.files[0]);
+                    }
+                });
+            }
+        }
+        
+        function processResultsDiscrepancyFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const csvText = e.target.result;
+                    const parsedData = parseDiscrepancyCSVData(csvText);
+                    
+                    if (parsedData && parsedData.length > 0) {
+                        // Store the discrepancy data for future refreshes
+                        currentDiscrepancyData = parsedData;
+                        integrateDiscrepancyData(parsedData);
+                        showDiscrepancyStatus(`✅ Successfully loaded ${parsedData.length} interest charges from CSV`, 'success');
+                    } else {
+                        showDiscrepancyStatus('⚠️ No interest charges found in CSV file', 'warning');
+                    }
+                } catch (error) {
+                    showDiscrepancyStatus('❌ Error parsing CSV file: ' + error.message, 'error');
+                }
+            };
+            
+            reader.readAsText(file);
+        }
+        
+        function integrateDiscrepancyData(actualCharges) {
+            // Show the actual column in the results table
+            showActualColumn();
+            
+            // Get calculated charges from the current results
+            const calculatedCharges = getCalculatedInterestCharges();
+            
+            if (calculatedCharges.length === 0) {
+                showDiscrepancyStatus('⚠️ No calculated interest charges found. Please run calculations first.', 'warning');
+                return;
+            }
+            
+            // Compare and update the table
+            const comparison = compareInterestCharges(actualCharges, calculatedCharges);
+            updateResultsTableWithActual(actualCharges, comparison);
+            showDiscrepancySummary(comparison);
+            
+            // Show the discrepancy analysis section
+            const analysisSection = document.getElementById('discrepancyAnalysisSection');
+            if (analysisSection) {
+                analysisSection.style.display = 'block';
+            }
+        }
+        
+        function showActualColumn() {
+            // Show the actual column header
+            const actualHeader = document.getElementById('actualColumn');
+            if (actualHeader) {
+                actualHeader.style.display = 'table-cell';
+            }
+            
+            // Show all actual column cells
+            const actualCells = document.querySelectorAll('.actual-column');
+            actualCells.forEach(cell => {
+                cell.style.display = 'table-cell';
+            });
+        }
+        
+        function updateResultsTableWithActual(actualCharges, comparison) {
+            // Create a map of actual charges by date
+            const actualMap = new Map();
+            actualCharges.forEach(charge => {
+                actualMap.set(charge.date, charge.amount);
+            });
+            
+            // Update each row with actual data and comparison indicators
+            const rows = document.querySelectorAll('.results-table tbody tr');
+            rows.forEach(row => {
+                const actualCell = row.querySelector('.actual-column');
+                if (!actualCell) return;
+                
+                const dateCell = row.querySelector('td:nth-child(2)');
+                if (!dateCell) return;
+                
+                const date = dateCell.textContent.trim();
+                const actualAmount = actualMap.get(date);
+                
+                if (actualAmount !== undefined) {
+                    const actualSpan = actualCell.querySelector('.actual-amount');
+                    const indicatorSpan = actualCell.querySelector('.comparison-indicator');
+                    
+                    if (actualSpan) {
+                        actualSpan.textContent = `$${actualAmount.toFixed(2)}`;
+                    }
+                    
+                    // Find the comparison result for this date
+                    let comparisonResult = null;
+                    if (comparison.matches.find(m => m.date === date)) {
+                        comparisonResult = { type: 'match', symbol: '✅', color: '#155724' };
+                    } else if (comparison.discrepancies.find(d => d.date === date)) {
+                        const disc = comparison.discrepancies.find(d => d.date === date);
+                        comparisonResult = { 
+                            type: 'discrepancy', 
+                            symbol: disc.difference > 0 ? '⬆️' : '⬇️', 
+                            color: disc.difference > 0 ? '#721c24' : '#0c5460',
+                            title: `Difference: ${disc.difference > 0 ? '+' : ''}$${disc.difference.toFixed(2)}`
+                        };
+                    }
+                    
+                    if (comparisonResult && indicatorSpan) {
+                        indicatorSpan.innerHTML = `<span style="color: ${comparisonResult.color};" title="${comparisonResult.title || comparisonResult.type}">${comparisonResult.symbol}</span>`;
+                    }
+                    
+                    // Highlight the row based on comparison
+                    if (comparisonResult) {
+                        if (comparisonResult.type === 'match') {
+                            row.style.backgroundColor = row.style.backgroundColor || '#d4edda';
+                            row.style.borderLeft = '3px solid #28a745';
+                        } else if (comparisonResult.type === 'discrepancy') {
+                            row.style.backgroundColor = row.style.backgroundColor || '#f8d7da';
+                            row.style.borderLeft = '3px solid #dc3545';
+                        }
+                    }
+                }
+            });
+        }
+        
+        function showDiscrepancySummary(comparison) {
+            const summaryDiv = document.getElementById('discrepancySummary');
+            if (!summaryDiv) return;
+            
+            const totalDiscrepancies = comparison.discrepancies.length + comparison.missing.length + comparison.extra.length;
+            
+            let summaryHtml = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 10px;">
+                    <div style="text-align: center; padding: 8px; background: #d4edda; border-radius: 4px; border: 1px solid #c3e6cb;">
+                        <div style="font-size: 18px; font-weight: bold; color: #155724;">${comparison.matches.length}</div>
+                        <div style="color: #155724; font-size: 12px;">Matches</div>
+                    </div>
+                    <div style="text-align: center; padding: 8px; background: #f8d7da; border-radius: 4px; border: 1px solid #f5c6cb;">
+                        <div style="font-size: 18px; font-weight: bold; color: #721c24;">${comparison.discrepancies.length}</div>
+                        <div style="color: #721c24; font-size: 12px;">Discrepancies</div>
+                    </div>
+                    <div style="text-align: center; padding: 8px; background: #fff3cd; border-radius: 4px; border: 1px solid #ffeaa7;">
+                        <div style="font-size: 18px; font-weight: bold; color: #856404;">${comparison.missing.length}</div>
+                        <div style="color: #856404; font-size: 12px;">Missing</div>
+                    </div>
+                    <div style="text-align: center; padding: 8px; background: #d1ecf1; border-radius: 4px; border: 1px solid #bee5eb;">
+                        <div style="font-size: 18px; font-weight: bold; color: #0c5460;">${comparison.extra.length}</div>
+                        <div style="color: #0c5460; font-size: 12px;">Extra</div>
+                    </div>
+                </div>
+            `;
+            
+            if (totalDiscrepancies === 0) {
+                summaryHtml += `<div style="text-align: center; padding: 10px; background: #d4edda; color: #155724; border-radius: 4px; font-weight: bold;">🎉 Perfect Match! All interest charges align correctly.</div>`;
+            } else {
+                summaryHtml += `<div style="text-align: center; padding: 10px; background: #fff3cd; color: #856404; border-radius: 4px; font-weight: bold;">⚠️ Found ${totalDiscrepancies} discrepancies requiring attention</div>`;
+            }
+            
+            // Add missing/extra charges details
+            if (comparison.missing.length > 0) {
+                summaryHtml += `<div style="margin-top: 10px; padding: 8px; background: #fff3cd; border-radius: 4px; border-left: 4px solid #ffc107;">
+                    <strong>Missing Charges:</strong> ${comparison.missing.map(m => `${m.date} ($${m.amount.toFixed(2)})`).join(', ')}
+                </div>`;
+            }
+            
+            if (comparison.extra.length > 0) {
+                summaryHtml += `<div style="margin-top: 10px; padding: 8px; background: #d1ecf1; border-radius: 4px; border-left: 4px solid #17a2b8;">
+                    <strong>Extra Charges:</strong> ${comparison.extra.map(e => `${e.date} ($${e.amount.toFixed(2)})`).join(', ')}
+                </div>`;
+            }
+            
+            summaryDiv.innerHTML = summaryHtml;
+        }
+        
+        function clearDiscrepancyAnalysis() {
+            // Hide the actual column
+            const actualHeader = document.getElementById('actualColumn');
+            if (actualHeader) {
+                actualHeader.style.display = 'none';
+            }
+            
+            const actualCells = document.querySelectorAll('.actual-column');
+            actualCells.forEach(cell => {
+                cell.style.display = 'none';
+            });
+            
+            // Clear row highlighting
+            const rows = document.querySelectorAll('.results-table tbody tr');
+            rows.forEach(row => {
+                row.style.borderLeft = '';
+                // Only reset background if it was set by discrepancy analysis
+                if (row.style.backgroundColor === 'rgb(212, 237, 218)' || row.style.backgroundColor === 'rgb(248, 215, 218)') {
+                    row.style.backgroundColor = '';
+                }
+            });
+            
+            // Hide the analysis section
+            const analysisSection = document.getElementById('discrepancyAnalysisSection');
+            if (analysisSection) {
+                analysisSection.style.display = 'none';
+            }
+            
+            // Clear the file input and stored data
+            const fileInput = document.getElementById('resultsDiscrepancyCsvInput');
+            if (fileInput) {
+                fileInput.value = '';
+            }
+            
+            // Clear stored discrepancy data
+            currentDiscrepancyData = null;
+        }
     </script>
 </body>
 </html>
