@@ -851,7 +851,7 @@
                             <div>
                                 <label for="periods1" style="font-weight: bold; margin-right: 10px;">Display Number of Interest Charges:</label>
                                 <input type="number" id="periods1" min="1" value="5" style="width: 80px; padding: 5px; border: 1px solid #ccc; border-radius: 3px; margin-right: 10px;">
-                                <button onclick="calculatePeriodsToToday()" style="background: #17a2b8; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px;">Up to Today</button>
+                                <button id="upToTodayBtn" onclick="calculatePeriodsToToday()" style="background: #17a2b8; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px;">Up to Today</button>
                             </div>
                             <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                                 <button onclick="exportResultsToCSV()" style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 3px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 5px;">
@@ -2438,6 +2438,10 @@
         
         // Export results table to CSV
         function exportResultsToCSV() {
+            // Check if actual column is visible (CSV comparison is active) - declare early
+            const actualHeader = document.getElementById('actualColumn');
+            const hasActualColumn = actualHeader && actualHeader.style.display !== 'none';
+            
             // Get the current calculation parameters
             const rate = parseFloat(document.getElementById('rate1').value);
             const issueDate = document.getElementById('issueDate1').value;
@@ -2472,7 +2476,16 @@
             csvContent += `Interest Interval,${interval} days\n`;
             csvContent += `Starting Principal,$${principal.toFixed(2)}\n`;
             csvContent += `Interest Type,${interestType.charAt(0).toUpperCase() + interestType.slice(1)} Interest\n`;
-            csvContent += `Number of Periods Displayed,${periods}\n\n`;
+            csvContent += `Number of Periods Displayed,${periods}\n`;
+            
+            // Add CSV comparison info if active
+            if (hasActualColumn && currentDiscrepancyData) {
+                csvContent += `CSV Comparison Active,Yes\n`;
+                csvContent += `CSV Data Points,${currentDiscrepancyData.length}\n`;
+                csvContent += `Export includes actual vs calculated comparison\n`;
+            }
+            
+            csvContent += '\n';
             
             // Add payment summary if any
             if (payments.length > 0) {
@@ -2516,7 +2529,12 @@
             
             // Add the main results table
             csvContent += 'Interest Calculation Results:\n';
-            csvContent += 'Period,Date,Days,Interest/Amount,Running Balance,Type,Notes\n';
+            
+            if (hasActualColumn) {
+                csvContent += 'Period,Date,Days,Interest/Amount,Actual,Running Balance,Type,Notes,Comparison\n';
+            } else {
+                csvContent += 'Period,Date,Days,Interest/Amount,Running Balance,Type,Notes\n';
+            }
             
             // Get the table data from the DOM
             const table = document.querySelector('.results-table tbody');
@@ -2525,12 +2543,29 @@
                 
                 rows.forEach(row => {
                     const cells = row.querySelectorAll('td');
-                    if (cells.length >= 5) {
+                    const minCells = hasActualColumn ? 6 : 5;
+                    
+                    if (cells.length >= minCells) {
                         const period = cells[0].textContent.replace(/MODIFIED|CUSTOM/g, '').trim();
                         const date = cells[1].querySelector('input') ? cells[1].querySelector('input').value : cells[1].textContent.trim();
                         const days = cells[2].textContent.trim();
                         const amount = cells[3].textContent.replace(/[\$\+\-]/g, '').trim();
-                        const balance = cells[4].textContent.replace('$', '').trim();
+                        
+                        let actual = '';
+                        let balance, balanceIndex;
+                        
+                        if (hasActualColumn) {
+                            // Actual column is at index 4, balance is at index 5
+                            const actualCell = cells[4];
+                            const actualSpan = actualCell.querySelector('.actual-amount');
+                            actual = actualSpan ? actualSpan.textContent.replace('$', '').trim() : '-';
+                            balanceIndex = 5;
+                        } else {
+                            // No actual column, balance is at index 4
+                            balanceIndex = 4;
+                        }
+                        
+                        balance = cells[balanceIndex].textContent.replace('$', '').trim();
                         
                         // Determine type and notes
                         let type = 'Interest';
@@ -2550,7 +2585,28 @@
                             notes += 'Modified';
                         }
                         
-                        csvContent += `"${period}","${date}","${days}","$${amount}","$${balance}","${type}","${notes}"\n`;
+                        // Get comparison indicator if present
+                        let comparison = '';
+                        if (hasActualColumn) {
+                            const actualCell = cells[4];
+                            const indicator = actualCell.querySelector('.comparison-indicator');
+                            if (indicator && indicator.textContent.trim()) {
+                                const indicatorText = indicator.textContent.trim();
+                                if (indicatorText.includes('✅')) {
+                                    comparison = 'Match';
+                                } else if (indicatorText.includes('⬆️')) {
+                                    comparison = 'Higher than calculated';
+                                } else if (indicatorText.includes('⬇️')) {
+                                    comparison = 'Lower than calculated';
+                                }
+                            }
+                        }
+                        
+                        if (hasActualColumn) {
+                            csvContent += `"${period}","${date}","${days}","$${amount}","$${actual}","$${balance}","${type}","${notes}","${comparison}"\n`;
+                        } else {
+                            csvContent += `"${period}","${date}","${days}","$${amount}","$${balance}","${type}","${notes}"\n`;
+                        }
                     }
                 });
             }
@@ -3219,6 +3275,15 @@
                 periodsInput.title = 'Disabled during CSV comparison to maintain data integrity';
             }
             
+            // Disable the "Up to Today" button to prevent changing the calculation
+            const upToTodayBtn = document.getElementById('upToTodayBtn');
+            if (upToTodayBtn) {
+                upToTodayBtn.disabled = true;
+                upToTodayBtn.style.backgroundColor = '#6c757d';
+                upToTodayBtn.style.cursor = 'not-allowed';
+                upToTodayBtn.title = 'Disabled during CSV comparison to maintain data integrity';
+            }
+            
             // Show the Clear Comparison button
             const clearBtn = document.getElementById('clearComparisonBtn');
             if (clearBtn) {
@@ -3315,6 +3380,15 @@
                 periodsInput.style.backgroundColor = '';
                 periodsInput.style.color = '';
                 periodsInput.title = '';
+            }
+            
+            // Re-enable the "Up to Today" button
+            const upToTodayBtn = document.getElementById('upToTodayBtn');
+            if (upToTodayBtn) {
+                upToTodayBtn.disabled = false;
+                upToTodayBtn.style.backgroundColor = '#17a2b8';
+                upToTodayBtn.style.cursor = 'pointer';
+                upToTodayBtn.title = '';
             }
             
             // Hide the Clear Comparison button
