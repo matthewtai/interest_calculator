@@ -803,7 +803,10 @@
                 <div id="payments-container">
                     <!-- Payment rows will be added here -->
                 </div>
-                <button type="button" onclick="addPaymentRow()" style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 3px; cursor: pointer; margin-top: 10px;">Add Payment</button>
+                <div style="margin-top: 10px; display: flex; gap: 10px;">
+                    <button type="button" onclick="addPaymentRow()" style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 3px; cursor: pointer;">Add Payment</button>
+                    <button type="button" onclick="removeAllPayments()" style="background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 3px; cursor: pointer;">Remove All</button>
+                </div>
             </div>
             
             <!-- CSV Upload Tab -->
@@ -932,6 +935,68 @@
                 // Refresh discrepancy analysis if active
                 refreshDiscrepancyAnalysis();
             }
+        }
+        
+        function removeAllPayments() {
+            // Show confirmation dialog
+            const confirmRemoval = confirm('Are you sure you want to remove all payments? This action cannot be undone.');
+            
+            if (confirmRemoval) {
+                const container = document.getElementById('payments-container');
+                container.innerHTML = '';
+                
+                // Reset payment counter
+                paymentCounter = 0;
+                
+                // Recalculate to update results
+                calculateGracePeriod();
+                
+                // Refresh discrepancy analysis if active
+                refreshDiscrepancyAnalysis();
+                
+                // Show feedback message
+                showTemporaryMessage('All payments have been removed.', 'success');
+            }
+        }
+        
+        function showTemporaryMessage(message, type = 'info') {
+            // Create or get existing message element
+            let messageDiv = document.getElementById('temp-message');
+            if (!messageDiv) {
+                messageDiv = document.createElement('div');
+                messageDiv.id = 'temp-message';
+                messageDiv.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    padding: 10px 15px;
+                    border-radius: 4px;
+                    color: white;
+                    font-weight: bold;
+                    z-index: 1000;
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
+                `;
+                document.body.appendChild(messageDiv);
+            }
+            
+            // Set message and style based on type
+            messageDiv.textContent = message;
+            if (type === 'success') {
+                messageDiv.style.backgroundColor = '#28a745';
+            } else if (type === 'error') {
+                messageDiv.style.backgroundColor = '#dc3545';
+            } else {
+                messageDiv.style.backgroundColor = '#007bff';
+            }
+            
+            // Show message
+            messageDiv.style.opacity = '1';
+            
+            // Hide after 3 seconds
+            setTimeout(() => {
+                messageDiv.style.opacity = '0';
+            }, 3000);
         }
         
         function getPayments() {
@@ -1297,7 +1362,9 @@
                         if (assetData[1] && assetData[11] && parseFloat(assetData[1]) > 0) { // amount and date
                             billInfo.payments.push({
                                 amount: parseFloat(assetData[1]),
-                                date: assetData[11]
+                                date: assetData[11],
+                                createdAt: assetData[7], // created_at field
+                                type: 'asset_transaction'
                             });
                         }
                     }
@@ -1317,7 +1384,9 @@
                         if (creditData[1] && creditData[5] && parseFloat(creditData[1]) > 0) { // amount and date
                             billInfo.payments.push({
                                 amount: parseFloat(creditData[1]),
-                                date: creditData[5]
+                                date: creditData[5],
+                                createdAt: creditData[4], // created_at field
+                                type: 'credit_note'
                             });
                         }
                     }
@@ -1396,7 +1465,7 @@
             
             // Add payments from CSV
             data.payments.forEach(payment => {
-                addPaymentFromCSV(payment.amount, payment.date);
+                addPaymentFromCSV(payment.amount, payment.date, payment.createdAt, payment.type);
             });
             
             // Trigger recalculation first
@@ -1447,14 +1516,35 @@
             return null;
         }
         
-        function addPaymentFromCSV(amount, date) {
+        function addPaymentFromCSV(amount, date, createdAt = null, type = null) {
             paymentCounter++;
             const container = document.getElementById('payments-container');
             const paymentRow = document.createElement('div');
             paymentRow.id = `payment-row-${paymentCounter}`;
-            paymentRow.style.cssText = 'display: flex; gap: 10px; margin-bottom: 10px; align-items: center;';
+            paymentRow.style.cssText = 'display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start;';
             
             const convertedDate = convertDateFormat(date);
+            
+            // Create the created_at display section if we have that data
+            let createdAtSection = '';
+            if (createdAt) {
+                const formattedCreatedAt = formatCreatedAtDate(createdAt);
+                createdAtSection = `
+                    <div style="font-size: 11px; color: #666; margin-top: 5px; padding: 3px; background-color: #f8f9fa; border-radius: 3px;">
+                        <div style="margin-bottom: 3px;"><strong>Created:</strong> ${formattedCreatedAt}</div>
+                        <div style="display: flex; gap: 5px;">
+                            <button type="button" onclick="replaceWithCreatedAt(${paymentCounter})" 
+                                    style="font-size: 10px; padding: 2px 6px; background: #007bff; color: white; border: none; border-radius: 2px; cursor: pointer;">
+                                Use Created Date
+                            </button>
+                            <button type="button" onclick="replaceWithOriginalDate(${paymentCounter})" 
+                                    style="font-size: 10px; padding: 2px 6px; background: #6c757d; color: white; border: none; border-radius: 2px; cursor: pointer;">
+                                Use Original Date
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
             
             paymentRow.innerHTML = `
                 <div style="display: flex; flex-direction: column;">
@@ -1464,14 +1554,130 @@
                 <div style="display: flex; flex-direction: column;">
                     <label style="font-size: 12px; margin-bottom: 2px;">Payment Date</label>
                     <input type="text" id="payment-date-${paymentCounter}" value="${date}" placeholder="MM/DD/YYYY" style="width: 140px; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">
+                    ${createdAtSection}
+                    <input type="hidden" id="payment-created-at-${paymentCounter}" value="${createdAt || ''}">
+                    <input type="hidden" id="payment-type-${paymentCounter}" value="${type || ''}">
+                    <input type="hidden" id="payment-original-date-${paymentCounter}" value="${date}">
                 </div>
-                <button type="button" onclick="removePaymentRow(${paymentCounter})" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin-top: 15px;">
+                <button type="button" onclick="removePaymentRow(${paymentCounter})" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin-top: 15px;">Remove</button>
             `;
             
             container.appendChild(paymentRow);
             addPaymentEventListeners(paymentCounter);
         }
         
+        // Format created_at date for display
+        function formatCreatedAtDate(createdAtString) {
+            if (!createdAtString) return '';
+            
+            try {
+                // Handle various date formats that might come from created_at
+                const date = new Date(createdAtString);
+                if (isNaN(date.getTime())) {
+                    return createdAtString; // Return original if can't parse
+                }
+                
+                // Format as MM/DD/YYYY for consistency
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const year = date.getFullYear();
+                return `${month}/${day}/${year}`;
+            } catch (e) {
+                return createdAtString; // Return original if error
+            }
+        }
+        
+        // Replace payment date with created_at date
+        function replaceWithCreatedAt(paymentId) {
+            const createdAtInput = document.getElementById(`payment-created-at-${paymentId}`);
+            const dateInput = document.getElementById(`payment-date-${paymentId}`);
+            
+            if (createdAtInput && dateInput && createdAtInput.value) {
+                const formattedDate = formatCreatedAtDate(createdAtInput.value);
+                dateInput.value = formattedDate;
+                
+                // Trigger recalculation
+                calculateGracePeriod();
+                
+                // Visual feedback
+                dateInput.style.backgroundColor = '#d4edda';
+                setTimeout(() => {
+                    dateInput.style.backgroundColor = '';
+                }, 1000);
+            }
+        }
+        
+        // Replace payment date with original date
+        function replaceWithOriginalDate(paymentId) {
+            const originalDateInput = document.getElementById(`payment-original-date-${paymentId}`);
+            const dateInput = document.getElementById(`payment-date-${paymentId}`);
+            
+            if (originalDateInput && dateInput && originalDateInput.value) {
+                dateInput.value = originalDateInput.value;
+                
+                // Trigger recalculation
+                calculateGracePeriod();
+                
+                // Visual feedback
+                dateInput.style.backgroundColor = '#fff3cd';
+                setTimeout(() => {
+                    dateInput.style.backgroundColor = '';
+                }, 1000);
+            }
+        }
+        
+        // Get created_at info for a payment by ID
+        function getPaymentCreatedAtInfo(paymentId) {
+            // Find the payment row in the DOM
+            const paymentRows = document.querySelectorAll('[id^="payment-row-"]');
+            for (const row of paymentRows) {
+                const rowId = row.id.split('-')[2];
+                const createdAtInput = document.getElementById(`payment-created-at-${rowId}`);
+                const typeInput = document.getElementById(`payment-type-${rowId}`);
+                const originalDateInput = document.getElementById(`payment-original-date-${rowId}`);
+                
+                if (rowId == paymentId) {
+                    return {
+                        createdAt: createdAtInput ? createdAtInput.value : null,
+                        type: typeInput ? typeInput.value : null,
+                        originalDate: originalDateInput ? originalDateInput.value : null
+                    };
+                }
+            }
+            return null;
+        }
+        
+        // Replace payment date in results table
+        function replacePaymentDateInTable(paymentKey, createdAtValue) {
+            const formattedDate = formatCreatedAtDate(createdAtValue);
+            updatePaymentFromTable(paymentKey, 'date', formattedDate);
+            
+            // Visual feedback for the table row
+            const row = document.querySelector(`[data-payment-key="${paymentKey}"]`);
+            if (row) {
+                const originalBg = row.style.backgroundColor;
+                row.style.backgroundColor = '#d4edda';
+                setTimeout(() => {
+                    row.style.backgroundColor = originalBg || '#e8f5e8'; // Restore payment row green
+                }, 1000);
+            }
+        }
+        
+        // Replace payment date in results table with original date
+        function replacePaymentDateInTableWithOriginal(paymentKey, originalDateValue) {
+            updatePaymentFromTable(paymentKey, 'date', originalDateValue);
+            
+            // Visual feedback for the table row
+            const row = document.querySelector(`[data-payment-key="${paymentKey}"]`);
+            if (row) {
+                const originalBg = row.style.backgroundColor;
+                row.style.backgroundColor = '#fff3cd';
+                setTimeout(() => {
+                    row.style.backgroundColor = originalBg || '#e8f5e8'; // Restore payment row green
+                }, 1000);
+            }
+        }
+
         function showCSVStatus(message, type) {
             const statusDiv = document.getElementById('csvStatus');
             statusDiv.style.display = 'block';
@@ -1887,6 +2093,38 @@
                     const modification = paymentModifications.get(paymentKey);
                     const hasDateModification = modification && modification.date;
                     
+                    // Get created_at info if available
+                    const createdAtInfo = getPaymentCreatedAtInfo(result.id);
+                    let createdAtDisplay = '';
+                    if (createdAtInfo && (createdAtInfo.createdAt || createdAtInfo.originalDate)) {
+                        let buttonsHtml = '';
+                        if (createdAtInfo.createdAt) {
+                            buttonsHtml += `
+                                <button type="button" onclick="replacePaymentDateInTable('${paymentKey}', '${createdAtInfo.createdAt}')" 
+                                        style="font-size: 9px; padding: 1px 4px; background: #007bff; color: white; border: none; border-radius: 2px; cursor: pointer; margin-right: 3px;">
+                                    Use Created
+                                </button>
+                            `;
+                        }
+                        if (createdAtInfo.originalDate) {
+                            buttonsHtml += `
+                                <button type="button" onclick="replacePaymentDateInTableWithOriginal('${paymentKey}', '${createdAtInfo.originalDate}')" 
+                                        style="font-size: 9px; padding: 1px 4px; background: #6c757d; color: white; border: none; border-radius: 2px; cursor: pointer;">
+                                    Use Original
+                                </button>
+                            `;
+                        }
+                        
+                        createdAtDisplay = `
+                            <div style="font-size: 10px; color: #666; margin-top: 3px; padding: 2px; background-color: #f8f9fa; border-radius: 2px;">
+                                ${createdAtInfo.createdAt ? `<div style="margin-bottom: 2px;"><strong>Created:</strong> ${formatCreatedAtDate(createdAtInfo.createdAt)}</div>` : ''}
+                                <div style="display: flex; gap: 2px; flex-wrap: wrap;">
+                                    ${buttonsHtml}
+                                </div>
+                            </div>
+                        `;
+                    }
+
                     let dateDisplayHtml;
                     if (hasDateModification) {
                         // Show both original and modified dates
@@ -1902,6 +2140,7 @@
                             <div style="font-size: 11px; color: #6c757d; font-style: italic;">
                                 Original: ${modification.originalDate}
                             </div>
+                            ${createdAtDisplay}
                         `;
                     } else {
                         // Show just the editable date input
@@ -1912,11 +2151,12 @@
                                    placeholder="MM/DD/YYYY"
                                    data-payment-key="${paymentKey}"
                                    onchange="updatePaymentFromTable('${paymentKey}', 'date', this.value)">
+                            ${createdAtDisplay}
                         `;
                     }
                     
                     html += `
-                        <tr class="${modificationClass}" data-payment-key="${paymentKey}" data-row-index="${results.indexOf(result)}" style="position: relative; ${!isModified ? 'background-color: #e8f5e8;' : ''}">
+                        <tr class="${modificationClass}" data-payment-key="${paymentKey}" data-row-index="${results.indexOf(result)}" style="position: relative; background-color: #e8f5e8; ${isModified ? 'border-left: 3px solid #ffc107;' : ''}">
                             <td>${result.period}${changeIndicator}</td>
                             <td>${dateDisplayHtml}</td>
                             <td>${result.days}</td>
