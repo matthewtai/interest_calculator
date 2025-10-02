@@ -1078,6 +1078,53 @@
             document.getElementById('selectAllCheckbox').checked = false;
         }
         
+        function selectRangeOfPeriods() {
+            const startInput = document.getElementById('rangeStart');
+            const endInput = document.getElementById('rangeEnd');
+            
+            const start = parseInt(startInput.value);
+            const end = parseInt(endInput.value);
+            
+            if (!start || !end) {
+                alert('Please enter both start and end period numbers.');
+                return;
+            }
+            
+            if (start < 1 || end < 1) {
+                alert('Period numbers must be 1 or greater.');
+                return;
+            }
+            
+            if (start > end) {
+                alert('Start period must be less than or equal to end period.');
+                return;
+            }
+            
+            // Get all interest checkboxes
+            const checkboxes = document.querySelectorAll('.zero-out-checkbox');
+            const interestCheckboxes = Array.from(checkboxes).filter(cb => {
+                const row = cb.closest('tr');
+                return row && row.classList.contains('interest-row');
+            });
+            
+            if (end > interestCheckboxes.length) {
+                alert(`End period ${end} exceeds total interest periods (${interestCheckboxes.length}). Please enter a valid range.`);
+                return;
+            }
+            
+            // Select the range (1-indexed for user, 0-indexed in array)
+            interestCheckboxes.forEach((cb, index) => {
+                const periodNumber = index + 1;
+                if (periodNumber >= start && periodNumber <= end) {
+                    cb.checked = true;
+                }
+            });
+            
+            // Update header checkbox state
+            const allChecked = interestCheckboxes.every(cb => cb.checked);
+            document.getElementById('selectAllCheckbox').checked = allChecked;
+        }
+        
         function generateZeroOutCredits() {
             // Get all checked interest periods
             const checkedBoxes = document.querySelectorAll('.zero-out-checkbox:checked');
@@ -2271,13 +2318,20 @@
             
             html += `
                 <div style="margin-bottom: 15px; padding: 10px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px; display: none;" id="zeroOutControls">
-                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
                         <div>
                             <strong>Zero-Out Feature:</strong> Select interest periods below and click the button to generate credit notes that will cancel out those interest charges.
                         </div>
-                        <div style="display: flex; gap: 10px;">
+                        <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
                             <button type="button" onclick="selectAllInterestPeriods()" style="background: #007bff; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 12px;">Select All</button>
                             <button type="button" onclick="deselectAllInterestPeriods()" style="background: #6c757d; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 12px;">Deselect All</button>
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <span style="font-size: 12px;">Range:</span>
+                                <input type="number" id="rangeStart" placeholder="From" min="1" style="width: 60px; padding: 4px; border: 1px solid #ccc; border-radius: 3px; font-size: 12px;">
+                                <span style="font-size: 12px;">to</span>
+                                <input type="number" id="rangeEnd" placeholder="To" min="1" style="width: 60px; padding: 4px; border: 1px solid #ccc; border-radius: 3px; font-size: 12px;">
+                                <button type="button" onclick="selectRangeOfPeriods()" style="background: #17a2b8; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 12px;">Select Range</button>
+                            </div>
                             <button type="button" onclick="generateZeroOutCredits()" style="background: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 13px; font-weight: bold;">Generate Credits</button>
                             <button type="button" onclick="toggleZeroOutMode()" style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 12px;">Cancel</button>
                         </div>
@@ -2305,10 +2359,12 @@
             
             let totalInterest = 0;
             let finalBalance = principal; // Start with original principal
+            let interestPeriodCounter = 0; // Track interest period numbers
             
             results.forEach(result => {
                 if (result.type === 'interest') {
                 totalInterest += result.interest;
+                interestPeriodCounter++;
                     
                     // Create tooltip content for interest
                     const details = result.calculationDetails;
@@ -2335,9 +2391,10 @@
                     `;
                     
                 html += `
-                    <tr data-row-index="${results.indexOf(result)}" data-interest-amount="${result.interest.toFixed(2)}" data-period-date="${result.date}" data-period-days="${result.days}" class="interest-row" style="position: relative;">
+                    <tr data-row-index="${results.indexOf(result)}" data-interest-amount="${result.interest.toFixed(2)}" data-period-date="${result.date}" data-period-days="${result.days}" data-period-number="${interestPeriodCounter}" class="interest-row" style="position: relative;">
                         <td class="zero-out-checkbox-cell" style="display: none; text-align: center;">
                             <input type="checkbox" class="zero-out-checkbox" data-row-index="${results.indexOf(result)}">
+                            <div style="font-size: 10px; color: #666; margin-top: 2px;">#${interestPeriodCounter}</div>
                         </td>
                         <td>${result.period}</td>
                         <td>${result.date}</td>
