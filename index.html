@@ -999,6 +999,292 @@
             }, 3000);
         }
         
+        // ===== Zero-Out Feature Functions =====
+        
+        let zeroOutModeActive = false;
+        
+        function toggleZeroOutMode() {
+            // Check if comparison mode is active
+            const actualColumn = document.getElementById('actualColumn');
+            const comparisonActive = actualColumn && actualColumn.style.display !== 'none';
+            
+            if (!zeroOutModeActive && comparisonActive) {
+                alert('Zero-Out Mode is not available when comparison analysis is active. Please hide the comparison first.');
+                return;
+            }
+            
+            zeroOutModeActive = !zeroOutModeActive;
+            
+            const controls = document.getElementById('zeroOutControls');
+            const enableBtn = document.getElementById('enableZeroOutBtn');
+            const checkboxHeader = document.getElementById('zeroOutCheckboxHeader');
+            const checkboxCells = document.querySelectorAll('.zero-out-checkbox-cell');
+            
+            if (zeroOutModeActive) {
+                // Show controls and checkboxes
+                controls.style.display = 'block';
+                enableBtn.style.display = 'none';
+                checkboxHeader.style.display = 'table-cell';
+                checkboxCells.forEach(cell => cell.style.display = 'table-cell');
+            } else {
+                // Hide controls and checkboxes
+                controls.style.display = 'none';
+                enableBtn.style.display = 'inline-block';
+                checkboxHeader.style.display = 'none';
+                checkboxCells.forEach(cell => cell.style.display = 'none');
+                
+                // Uncheck all checkboxes
+                document.querySelectorAll('.zero-out-checkbox').forEach(cb => cb.checked = false);
+                document.getElementById('selectAllCheckbox').checked = false;
+            }
+        }
+        
+        // Update enable button visibility when comparison mode changes
+        function updateZeroOutButtonVisibility() {
+            const actualColumn = document.getElementById('actualColumn');
+            const enableBtn = document.getElementById('enableZeroOutBtn');
+            const comparisonActive = actualColumn && actualColumn.style.display !== 'none';
+            
+            // Check if simple interest is selected
+            const interestType = document.querySelector('input[name="interestType"]:checked');
+            const isSimpleInterest = interestType && interestType.value === 'simple';
+            
+            if (enableBtn) {
+                if (comparisonActive || isSimpleInterest) {
+                    enableBtn.style.display = 'none';
+                } else if (!zeroOutModeActive) {
+                    enableBtn.style.display = 'inline-block';
+                }
+            }
+        }
+        
+        function toggleAllZeroOutCheckboxes(checked) {
+            document.querySelectorAll('.zero-out-checkbox').forEach(cb => {
+                cb.checked = checked;
+            });
+        }
+        
+        function selectAllInterestPeriods() {
+            document.querySelectorAll('.zero-out-checkbox').forEach(cb => {
+                cb.checked = true;
+            });
+            document.getElementById('selectAllCheckbox').checked = true;
+        }
+        
+        function deselectAllInterestPeriods() {
+            document.querySelectorAll('.zero-out-checkbox').forEach(cb => {
+                cb.checked = false;
+            });
+            document.getElementById('selectAllCheckbox').checked = false;
+        }
+        
+        function generateZeroOutCredits() {
+            // Get all checked interest periods
+            const checkedBoxes = document.querySelectorAll('.zero-out-checkbox:checked');
+            
+            if (checkedBoxes.length === 0) {
+                alert('Please select at least one interest period to zero out.');
+                return;
+            }
+            
+            // Collect selected periods data
+            const selectedPeriods = [];
+            checkedBoxes.forEach(checkbox => {
+                const row = checkbox.closest('tr');
+                
+                // Make sure we only process interest rows
+                if (!row.classList.contains('interest-row')) {
+                    return;
+                }
+                
+                const interestAmount = parseFloat(row.dataset.interestAmount);
+                const periodDate = row.dataset.periodDate;
+                const periodDays = parseInt(row.dataset.periodDays);
+                
+                // Validate data
+                if (isNaN(interestAmount) || !periodDate || isNaN(periodDays)) {
+                    console.warn('Skipping row with invalid data:', row);
+                    return;
+                }
+                
+                selectedPeriods.push({
+                    amount: interestAmount,
+                    date: periodDate,
+                    days: periodDays
+                });
+            });
+            
+            if (selectedPeriods.length === 0) {
+                alert('No valid interest periods selected. Please ensure you have calculated interest charges.');
+                return;
+            }
+            
+            // Sort by date
+            selectedPeriods.sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            // Check interest type
+            const interestType = document.querySelector('input[name="interestType"]:checked').value;
+            
+            // Confirm with user - explain behavior based on interest type
+            const initialTotal = selectedPeriods.reduce((sum, p) => sum + p.amount, 0);
+            let message;
+            
+            if (interestType === 'simple') {
+                message = `Generate ${selectedPeriods.length} credit note(s) totaling $${initialTotal.toFixed(2)}?\n\nNote: For Simple Interest, all credits will use the currently displayed amounts. After applying these credits, you may need to run zero-out again as the reduced principal will affect remaining interest charges.\n\nEach credit will be dated one day after its corresponding interest period.`;
+            } else {
+                message = `Generate ${selectedPeriods.length} credit note(s)?\n\nInitial total: $${initialTotal.toFixed(2)}\n\nNote: For Compound Interest, each credit will be recalculated based on the updated balance after the previous credit is applied. This ensures accurate amounts.\n\nEach credit will be dated one day after its corresponding interest period.`;
+            }
+            
+            if (!confirm(message)) {
+                return;
+            }
+            
+            // Exit zero-out mode first
+            toggleZeroOutMode();
+            
+            // Generate credits based on interest type
+            if (interestType === 'simple') {
+                // For simple interest, generate all at once using current amounts
+                generateCreditsAllAtOnce(selectedPeriods);
+            } else {
+                // For compound interest, generate iteratively to get accurate amounts
+                generateCreditsIteratively(selectedPeriods, 0);
+            }
+        }
+        
+        // Generate all credits at once (for simple interest)
+        function generateCreditsAllAtOnce(periods) {
+            console.log('generateCreditsAllAtOnce called for', periods.length, 'periods');
+            
+            let totalAmount = 0;
+            
+            // IMPORTANT: For simple interest, use the interest amounts that were displayed
+            // BEFORE any credits are applied. These amounts are already captured in the
+            // periods array from when the user selected them.
+            // We generate all credits based on those original amounts, not recalculated ones.
+            
+            periods.forEach(period => {
+                const creditDate = getNextDay(period.date);
+                console.log('Adding payment of', period.amount, 'on', creditDate, 'for period', period.date);
+                addPaymentFromCSV(period.amount, creditDate, null, 'zero_out_credit');
+                totalAmount += period.amount;
+            });
+            
+            // Recalculate once with all credits applied
+            calculateGracePeriod();
+            
+            // Show success message with helpful note
+            showTemporaryMessage(`Successfully generated ${periods.length} credit note(s) totaling $${totalAmount.toFixed(2)}. These credits zero out the selected periods based on their original interest amounts.`, 'success');
+        }
+        
+        // Generate credits iteratively to get accurate amounts after each credit
+        function generateCreditsIteratively(periods, index) {
+            console.log(`generateCreditsIteratively called with index ${index} of ${periods.length}`);
+            
+            if (index >= periods.length) {
+                // All credits generated, show final message
+                const actualTotal = periods.reduce((sum, p) => sum + (p.actualAmount || 0), 0);
+                console.log('All credits generated. Total:', actualTotal);
+                showTemporaryMessage(`Successfully generated ${periods.length} credit note(s) totaling $${actualTotal.toFixed(2)}. Calculations updated with accurate amounts.`, 'success');
+                
+                // Final recalculation to show all credits
+                calculateGracePeriod();
+                return;
+            }
+            
+            const period = periods[index];
+            console.log(`Processing period ${index}:`, period.date);
+            
+            // If this is not the first credit, recalculate to get updated interest amount
+            if (index > 0) {
+                console.log('Not first credit, recalculating...');
+                // Recalculate with the previous credits applied
+                calculateGracePeriod();
+                
+                // Wait for calculation AND rendering to complete
+                setTimeout(() => {
+                    console.log('Recalculation complete, getting updated amount for', period.date);
+                    
+                    // Debug: Check if table has been updated
+                    const table = document.querySelector('#results1-content .results-table tbody');
+                    const interestRows = table ? table.querySelectorAll('tr.interest-row') : [];
+                    console.log('Table exists:', !!table, 'Interest rows found:', interestRows.length);
+                    
+                    // Get the updated interest amount for this period from the recalculated table
+                    const updatedAmount = getUpdatedInterestAmountForDate(period.date);
+                    console.log('Updated amount for', period.date, ':', updatedAmount);
+                    
+                    if (updatedAmount !== null && updatedAmount > 0) {
+                        period.actualAmount = updatedAmount;
+                        const creditDate = getNextDay(period.date);
+                        console.log('Adding payment of', updatedAmount, 'on', creditDate);
+                        addPaymentFromCSV(updatedAmount, creditDate, null, 'zero_out_credit');
+                        
+                        // Generate next credit
+                        console.log('Moving to next credit');
+                        generateCreditsIteratively(periods, index + 1);
+                    } else {
+                        // Interest already zero, skip this period
+                        console.log(`Skipping period ${period.date} - interest already zero or null`);
+                        period.actualAmount = 0;
+                        generateCreditsIteratively(periods, index + 1);
+                    }
+                }, 100); // Wait for recalculation AND rendering
+            } else {
+                // First credit uses the original amount
+                console.log('First credit, using original amount:', period.amount);
+                period.actualAmount = period.amount;
+                const creditDate = getNextDay(period.date);
+                console.log('Adding payment of', period.amount, 'on', creditDate);
+                addPaymentFromCSV(period.amount, creditDate, null, 'zero_out_credit');
+                
+                // Generate next credit
+                console.log('Moving to next credit');
+                generateCreditsIteratively(periods, index + 1);
+            }
+        }
+        
+        // Get the current interest amount for a specific date from the results table
+        function getUpdatedInterestAmountForDate(targetDate) {
+            console.log('getUpdatedInterestAmountForDate called for:', targetDate);
+            
+            const rows = document.querySelectorAll('.results-table tbody tr.interest-row');
+            console.log('Found', rows.length, 'interest rows in table');
+            
+            for (const row of rows) {
+                // Use data attribute for date (most reliable)
+                const rowDate = row.dataset.periodDate;
+                const rowAmount = row.dataset.interestAmount;
+                
+                console.log('Checking row: date=', rowDate, 'amount=', rowAmount);
+                
+                if (rowDate === targetDate) {
+                    const amount = parseFloat(rowAmount);
+                    console.log('Found match! Returning amount:', amount);
+                    return amount;
+                }
+            }
+            
+            console.log('No match found for date:', targetDate);
+            return null;
+        }
+        
+        function getNextDay(dateString) {
+            // Parse MM/DD/YYYY format
+            const parts = dateString.split('/');
+            const date = new Date(parts[2], parts[0] - 1, parts[1]);
+            
+            // Add one day
+            date.setDate(date.getDate() + 1);
+            
+            // Format back to MM/DD/YYYY
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const year = date.getFullYear();
+            
+            return `${month}/${day}/${year}`;
+        }
+        
         function getPayments() {
             const payments = [];
             const container = document.getElementById('payments-container');
@@ -1067,12 +1353,17 @@
                     
                     // Always include the payment if amount is valid, even with date issues
                     if (amount > 0 && !isNaN(amount)) {
+                        // Get payment type from hidden input
+                        const typeInput = document.getElementById(`payment-type-${id}`);
+                        const paymentType = typeInput ? typeInput.value : null;
+                        
                         payments.push({ 
                             amount, 
                             date, 
                             id,
                             originalDateValue: dateValue,
-                            dateValid: dateValid
+                            dateValid: dateValid,
+                            paymentType: paymentType
                         });
                     } else if (amountInput.value.trim() !== '') {
                         // Highlight invalid amounts too
@@ -1471,9 +1762,6 @@
             // Trigger recalculation first
             calculateGracePeriod();
             
-            // Auto-click "Up to Today" to prepare for comparison
-            calculatePeriodsToToday();
-            
             // Extract interest data from the same CSV for comparison
             const csvFileInput = document.getElementById('csvFileInput');
             if (csvFileInput && csvFileInput.files[0]) {
@@ -1484,14 +1772,27 @@
                         const interestData = parseDiscrepancyCSVData(csvText);
                         
                         if (interestData && interestData.length > 0) {
-                            // Store the interest data and integrate it
+                            // Store the interest data
                             currentDiscrepancyData = interestData;
                             
-                            // Small delay to ensure calculations are complete
+                            // Auto-click "Up to Today" first, then integrate data
+                            calculatePeriodsToToday();
+                            
+                            // Longer delay to ensure "Up to Today" calculation completes
                             setTimeout(() => {
-                                integrateDiscrepancyData(interestData);
-                                showDiscrepancyStatus(`✅ Bill Inspector CSV loaded with ${interestData.length} interest charges for comparison`, 'success');
-                            }, 200);
+                                // Ensure results are displayed first
+                                const resultsContent = document.getElementById('results1-content');
+                                if (!resultsContent || !resultsContent.innerHTML.includes('results-table')) {
+                                    console.log('Results table not ready, triggering display...');
+                                    displayResults1();
+                                }
+                                
+                                // Small additional delay to ensure display completes
+                                setTimeout(() => {
+                                    integrateDiscrepancyData(interestData);
+                                    showDiscrepancyStatus(`✅ Bill Inspector CSV loaded with ${interestData.length} interest charges for comparison`, 'success');
+                                }, 100);
+                            }, 500);
                         }
                     } catch (error) {
                         console.log('Could not extract interest data for comparison:', error.message);
@@ -1840,7 +2141,8 @@
                     type: 'payment',
                     date: payment.date,
                     amount: payment.amount,
-                    id: payment.id
+                    id: payment.id,
+                    paymentType: payment.paymentType
                 });
             });
             
@@ -1931,9 +2233,15 @@
                         currentPrincipal = Math.max(0, currentPrincipal - paymentAmount);
                     }
                     
+                    // Determine display name based on payment type
+                    let periodName = 'Payment';
+                    if (event.paymentType === 'zero_out_credit') {
+                        periodName = 'Zero-Out Credit';
+                    }
+                    
                     results.push({
                         type: 'payment',
-                        period: 'Payment',
+                        period: periodName,
                         date: formatDate(event.date),
                         rawDate: event.date,
                         days: '-',
@@ -1943,6 +2251,7 @@
                         originalDate: formatDate(event.date),
                         balance: runningTotal,
                         id: event.id,
+                        paymentType: event.paymentType,
                         calculationDetails: {
                             type: 'Payment Applied',
                             explanation: `Payment of $${event.amount.toFixed(2)} applied. ${paymentAmount < event.amount ? `Only $${paymentAmount.toFixed(2)} was applied as it cannot exceed the current balance.` : ''} ${interestType === 'simple' ? `For simple interest, this reduces the principal used for future interest calculations to $${currentPrincipal.toFixed(2)}.` : ''}`,
@@ -1997,9 +2306,28 @@
             }
             
             html += `
+                <div style="margin-bottom: 15px; padding: 10px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px; display: none;" id="zeroOutControls">
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <strong>Zero-Out Feature:</strong> Select interest periods below and click the button to generate credit notes that will cancel out those interest charges.
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button type="button" onclick="selectAllInterestPeriods()" style="background: #007bff; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 12px;">Select All</button>
+                            <button type="button" onclick="deselectAllInterestPeriods()" style="background: #6c757d; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 12px;">Deselect All</button>
+                            <button type="button" onclick="generateZeroOutCredits()" style="background: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 13px; font-weight: bold;">Generate Credits</button>
+                            <button type="button" onclick="toggleZeroOutMode()" style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 12px;">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <button type="button" onclick="toggleZeroOutMode()" id="enableZeroOutBtn" style="background: #ffc107; color: #000; border: none; padding: 8px 15px; border-radius: 3px; cursor: pointer; font-weight: bold;">Enable Zero-Out Mode</button>
+                </div>
                 <table class="results-table">
                     <thead>
                         <tr>
+                            <th id="zeroOutCheckboxHeader" style="display: none; width: 40px;">
+                                <input type="checkbox" id="selectAllCheckbox" onchange="toggleAllZeroOutCheckboxes(this.checked)" title="Select/Deselect All">
+                            </th>
                             <th>Period</th>
                             <th>Date</th>
                             <th>Days</th>
@@ -2043,7 +2371,10 @@
                     `;
                     
                 html += `
-                    <tr data-row-index="${results.indexOf(result)}" style="position: relative;">
+                    <tr data-row-index="${results.indexOf(result)}" data-interest-amount="${result.interest.toFixed(2)}" data-period-date="${result.date}" data-period-days="${result.days}" class="interest-row" style="position: relative;">
+                        <td class="zero-out-checkbox-cell" style="display: none; text-align: center;">
+                            <input type="checkbox" class="zero-out-checkbox" data-row-index="${results.indexOf(result)}">
+                        </td>
                         <td>${result.period}</td>
                         <td>${result.date}</td>
                         <td>${result.days}</td>
@@ -2157,6 +2488,7 @@
                     
                     html += `
                         <tr class="${modificationClass}" data-payment-key="${paymentKey}" data-row-index="${results.indexOf(result)}" style="position: relative; background-color: #e8f5e8; ${isModified ? 'border-left: 3px solid #ffc107;' : ''}">
+                            <td class="zero-out-checkbox-cell" style="display: none;"></td>
                             <td>${result.period}${changeIndicator}</td>
                             <td>${dateDisplayHtml}</td>
                             <td>${result.days}</td>
@@ -2230,6 +2562,7 @@
                     
                     html += `
                         <tr class="custom-entry-row ${customModificationClass}" data-row-index="${results.indexOf(result)}" data-custom-key="${customKey}" style="position: relative;">
+                            <td class="zero-out-checkbox-cell" style="display: none;"></td>
                             <td>${customDescriptionHtml}<span class="custom-entry-indicator">CUSTOM</span>${customChangeIndicator}</td>
                             <td>${customDateHtml}</td>
                             <td>${result.days}</td>
@@ -2817,28 +3150,33 @@
             if (table) {
                 const rows = table.querySelectorAll('tr:not(.insert-form-row)');
                 
+                // Check if zero-out checkbox column is present
+                const checkboxHeader = document.getElementById('zeroOutCheckboxHeader');
+                const hasCheckboxColumn = checkboxHeader && checkboxHeader.style.display !== 'none';
+                const offset = hasCheckboxColumn ? 1 : 0;
+                
                 rows.forEach(row => {
                     const cells = row.querySelectorAll('td');
-                    const minCells = hasActualColumn ? 6 : 5;
+                    const minCells = hasActualColumn ? (6 + offset) : (5 + offset);
                     
                     if (cells.length >= minCells) {
-                        const period = cells[0].textContent.replace(/MODIFIED|CUSTOM/g, '').trim();
-                        const date = cells[1].querySelector('input') ? cells[1].querySelector('input').value : cells[1].textContent.trim();
-                        const days = cells[2].textContent.trim();
-                        const amount = cells[3].textContent.replace(/[\$\+\-]/g, '').trim();
+                        const period = cells[0 + offset].textContent.replace(/MODIFIED|CUSTOM/g, '').trim();
+                        const date = cells[1 + offset].querySelector('input') ? cells[1 + offset].querySelector('input').value : cells[1 + offset].textContent.trim();
+                        const days = cells[2 + offset].textContent.trim();
+                        const amount = cells[3 + offset].textContent.replace(/[\$\+\-]/g, '').trim();
                         
                         let actual = '';
                         let balance, balanceIndex;
                         
                         if (hasActualColumn) {
-                            // Actual column is at index 4, balance is at index 5
-                            const actualCell = cells[4];
+                            // Actual column is at index 4 (+ offset), balance is at index 5 (+ offset)
+                            const actualCell = cells[4 + offset];
                             const actualSpan = actualCell.querySelector('.actual-amount');
                             actual = actualSpan ? actualSpan.textContent.replace('$', '').trim() : '-';
-                            balanceIndex = 5;
+                            balanceIndex = 5 + offset;
                         } else {
-                            // No actual column, balance is at index 4
-                            balanceIndex = 4;
+                            // No actual column, balance is at index 4 (+ offset)
+                            balanceIndex = 4 + offset;
                         }
                         
                         balance = cells[balanceIndex].textContent.replace('$', '').trim();
@@ -2864,7 +3202,7 @@
                         // Get comparison indicator if present
                         let comparison = '';
                         if (hasActualColumn) {
-                            const actualCell = cells[4];
+                            const actualCell = cells[4 + offset];
                             const indicator = actualCell.querySelector('.comparison-indicator');
                             if (indicator && indicator.textContent.trim()) {
                                 const indicatorText = indicator.textContent.trim();
@@ -2988,7 +3326,10 @@
             // Interest type radio buttons
             const radioButtons = document.querySelectorAll('input[name="interestType"]');
             radioButtons.forEach(radio => {
-                radio.addEventListener('change', calculateGracePeriod);
+                radio.addEventListener('change', () => {
+                    calculateGracePeriod();
+                    updateZeroOutButtonVisibility();
+                });
             });
         }
         
@@ -3290,36 +3631,55 @@
             const results = [];
             const table = document.querySelector('#results1-content .results-table tbody');
             
-            if (!table) return results;
+            console.log('getCalculatedInterestCharges: table found?', !!table);
+            if (!table) {
+                console.log('Table not found with selector: #results1-content .results-table tbody');
+                return results;
+            }
+            
+            // Check if zero-out checkbox column is present (affects cell indices)
+            const checkboxHeader = document.getElementById('zeroOutCheckboxHeader');
+            const hasCheckboxColumn = checkboxHeader && checkboxHeader.style.display !== 'none';
+            
+            // Check if actual column is present (affects cell indices)
+            const actualHeader = document.getElementById('actualColumn');
+            const hasActualColumn = actualHeader && actualHeader.style.display !== 'none';
+            
+            const offset = hasCheckboxColumn ? 1 : 0;
+            console.log('hasCheckboxColumn:', hasCheckboxColumn, 'hasActualColumn:', hasActualColumn, 'offset:', offset);
             
             const rows = table.querySelectorAll('tr:not(.insert-form-row)');
-            rows.forEach(row => {
-                const cells = row.querySelectorAll('td');
-                if (cells.length >= 4) {
-                    const dateCell = cells[1];
-                    const interestCell = cells[3]; // Fixed: Interest is in column 3, not 4
+            console.log('Found', rows.length, 'rows to process');
+            
+            rows.forEach((row, index) => {
+                // Only process interest rows
+                if (!row.classList.contains('interest-row')) {
+                    console.log(`Row ${index}: Not an interest row, skipping`);
+                    return;
+                }
+                
+                // Try to get data from data attributes first (more reliable)
+                const periodDate = row.dataset.periodDate;
+                const interestAmount = row.dataset.interestAmount;
+                
+                if (periodDate && interestAmount) {
+                    const amount = parseFloat(interestAmount);
+                    console.log(`Row ${index}: Using data attributes - date="${periodDate}", amount=${amount}`);
                     
-                    if (dateCell && interestCell) {
-                        const date = dateCell.textContent.trim();
-                        const interestText = interestCell.textContent.trim();
-                        
-                        // Handle both simple $XX.XX format and tooltip container format
-                        let interestMatch = interestText.match(/\$([0-9,]+\.?[0-9]*)/);
-                        
-                        if (interestMatch && date !== 'Date') {
-                            const amount = parseFloat(interestMatch[1].replace(/,/g, ''));
-                            if (!isNaN(amount) && amount > 0) {
-                                results.push({
-                                    date: date,
-                                    amount: amount,
-                                    type: 'calculated'
-                                });
-                            }
-                        }
+                    if (!isNaN(amount) && amount > 0) {
+                        results.push({
+                            date: periodDate,
+                            amount: amount,
+                            type: 'calculated'
+                        });
+                        console.log(`Row ${index}: Added to results from data attributes`);
                     }
+                } else {
+                    console.log(`Row ${index}: Missing data attributes (periodDate="${periodDate}", interestAmount="${interestAmount}")`);
                 }
             });
             
+            console.log('getCalculatedInterestCharges returning', results.length, 'results');
             return results;
         }
         
@@ -3555,11 +3915,14 @@
         }
         
         function integrateDiscrepancyData(actualCharges) {
+            console.log('integrateDiscrepancyData called with', actualCharges.length, 'charges');
+            
             // Show the actual column in the results table
             showActualColumn();
             
             // Get calculated charges from the current results
             const calculatedCharges = getCalculatedInterestCharges();
+            console.log('Found', calculatedCharges.length, 'calculated charges');
             
             if (calculatedCharges.length === 0) {
                 showDiscrepancyStatus('⚠️ No calculated interest charges found. Please run calculations first.', 'warning');
@@ -3568,6 +3931,8 @@
             
             // Compare and update the table
             const comparison = compareInterestCharges(actualCharges, calculatedCharges);
+            console.log('Comparison results:', comparison);
+            
             updateResultsTableWithActual(actualCharges, comparison);
             showDiscrepancySummary(comparison);
         }
@@ -3584,6 +3949,9 @@
             actualCells.forEach(cell => {
                 cell.style.display = 'table-cell';
             });
+            
+            // Update zero-out button visibility
+            updateZeroOutButtonVisibility();
             
             // Disable the periods input to prevent breaking the comparison
             const periodsInput = document.getElementById('periods1');
@@ -3616,18 +3984,50 @@
             actualCharges.forEach(charge => {
                 actualMap.set(charge.date, charge.amount);
             });
+            console.log('Actual map created with dates:', Array.from(actualMap.keys()));
             
             // Update each row with actual data and comparison indicators
             const rows = document.querySelectorAll('.results-table tbody tr');
+            console.log('Found', rows.length, 'rows to update');
+            
+            let updatedCount = 0;
             rows.forEach(row => {
                 const actualCell = row.querySelector('.actual-column');
-                if (!actualCell) return;
+                if (!actualCell) {
+                    return;
+                }
                 
-                const dateCell = row.querySelector('td:nth-child(2)');
-                if (!dateCell) return;
+                // Use data attribute for date matching (more reliable than cell parsing)
+                let date = null;
                 
-                const date = dateCell.textContent.trim();
+                if (row.classList.contains('interest-row') && row.dataset.periodDate) {
+                    // For interest rows, use the data attribute
+                    date = row.dataset.periodDate;
+                } else {
+                    // For payment rows or other rows, try to find date from cells
+                    const cells = row.querySelectorAll('td');
+                    for (let i = 0; i < cells.length; i++) {
+                        const cellText = cells[i].textContent.trim();
+                        // Match MM/DD/YYYY format
+                        if (/^\d{2}\/\d{2}\/\d{4}$/.test(cellText)) {
+                            date = cellText;
+                            break;
+                        }
+                        // Also check for input fields with dates
+                        const input = cells[i].querySelector('input[type="text"]');
+                        if (input && input.value && /^\d{2}\/\d{2}\/\d{4}$/.test(input.value)) {
+                            date = input.value;
+                            break;
+                        }
+                    }
+                }
+                
+                if (!date) {
+                    return;
+                }
+                
                 const actualAmount = actualMap.get(date);
+                console.log('Row date:', date, 'actualAmount:', actualAmount);
                 
                 if (actualAmount !== undefined) {
                     const actualSpan = actualCell.querySelector('.actual-amount');
@@ -3635,6 +4035,10 @@
                     
                     if (actualSpan) {
                         actualSpan.textContent = `$${actualAmount.toFixed(2)}`;
+                        updatedCount++;
+                        console.log('Updated row with date', date, 'to amount', actualAmount);
+                    } else {
+                        console.log('No .actual-amount span found in actualCell');
                     }
                     
                     // Find the comparison result for this date
@@ -3667,6 +4071,8 @@
                     }
                 }
             });
+            
+            console.log('Updated', updatedCount, 'rows with actual data');
         }
         
         function showDiscrepancySummary(comparison) {
@@ -3685,6 +4091,9 @@
             actualCells.forEach(cell => {
                 cell.style.display = 'none';
             });
+            
+            // Update zero-out button visibility
+            updateZeroOutButtonVisibility();
             
             // Re-enable the periods input
             const periodsInput = document.getElementById('periods1');
