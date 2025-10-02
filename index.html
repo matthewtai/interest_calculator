@@ -1103,7 +1103,6 @@
                 
                 // Validate data
                 if (isNaN(interestAmount) || !periodDate || isNaN(periodDays)) {
-                    console.warn('Skipping row with invalid data:', row);
                     return;
                 }
                 
@@ -1154,8 +1153,6 @@
         
         // Generate all credits at once (for simple interest)
         function generateCreditsAllAtOnce(periods) {
-            console.log('generateCreditsAllAtOnce called for', periods.length, 'periods');
-            
             let totalAmount = 0;
             
             // IMPORTANT: For simple interest, use the interest amounts that were displayed
@@ -1165,7 +1162,6 @@
             
             periods.forEach(period => {
                 const creditDate = getNextDay(period.date);
-                console.log('Adding payment of', period.amount, 'on', creditDate, 'for period', period.date);
                 addPaymentFromCSV(period.amount, creditDate, null, 'zero_out_credit');
                 totalAmount += period.amount;
             });
@@ -1179,12 +1175,9 @@
         
         // Generate credits iteratively to get accurate amounts after each credit
         function generateCreditsIteratively(periods, index) {
-            console.log(`generateCreditsIteratively called with index ${index} of ${periods.length}`);
-            
             if (index >= periods.length) {
                 // All credits generated, show final message
                 const actualTotal = periods.reduce((sum, p) => sum + (p.actualAmount || 0), 0);
-                console.log('All credits generated. Total:', actualTotal);
                 showTemporaryMessage(`Successfully generated ${periods.length} credit note(s) totaling $${actualTotal.toFixed(2)}. Calculations updated with accurate amounts.`, 'success');
                 
                 // Final recalculation to show all credits
@@ -1193,79 +1186,56 @@
             }
             
             const period = periods[index];
-            console.log(`Processing period ${index}:`, period.date);
             
             // If this is not the first credit, recalculate to get updated interest amount
             if (index > 0) {
-                console.log('Not first credit, recalculating...');
                 // Recalculate with the previous credits applied
                 calculateGracePeriod();
                 
                 // Wait for calculation AND rendering to complete
                 setTimeout(() => {
-                    console.log('Recalculation complete, getting updated amount for', period.date);
-                    
-                    // Debug: Check if table has been updated
-                    const table = document.querySelector('#results1-content .results-table tbody');
-                    const interestRows = table ? table.querySelectorAll('tr.interest-row') : [];
-                    console.log('Table exists:', !!table, 'Interest rows found:', interestRows.length);
-                    
                     // Get the updated interest amount for this period from the recalculated table
                     const updatedAmount = getUpdatedInterestAmountForDate(period.date);
-                    console.log('Updated amount for', period.date, ':', updatedAmount);
                     
                     if (updatedAmount !== null && updatedAmount > 0) {
                         period.actualAmount = updatedAmount;
                         const creditDate = getNextDay(period.date);
-                        console.log('Adding payment of', updatedAmount, 'on', creditDate);
                         addPaymentFromCSV(updatedAmount, creditDate, null, 'zero_out_credit');
                         
                         // Generate next credit
-                        console.log('Moving to next credit');
                         generateCreditsIteratively(periods, index + 1);
                     } else {
                         // Interest already zero, skip this period
-                        console.log(`Skipping period ${period.date} - interest already zero or null`);
                         period.actualAmount = 0;
                         generateCreditsIteratively(periods, index + 1);
                     }
                 }, 100); // Wait for recalculation AND rendering
             } else {
                 // First credit uses the original amount
-                console.log('First credit, using original amount:', period.amount);
                 period.actualAmount = period.amount;
                 const creditDate = getNextDay(period.date);
-                console.log('Adding payment of', period.amount, 'on', creditDate);
                 addPaymentFromCSV(period.amount, creditDate, null, 'zero_out_credit');
                 
                 // Generate next credit
-                console.log('Moving to next credit');
                 generateCreditsIteratively(periods, index + 1);
             }
         }
         
         // Get the current interest amount for a specific date from the results table
         function getUpdatedInterestAmountForDate(targetDate) {
-            console.log('getUpdatedInterestAmountForDate called for:', targetDate);
-            
             const rows = document.querySelectorAll('.results-table tbody tr.interest-row');
-            console.log('Found', rows.length, 'interest rows in table');
             
             for (const row of rows) {
                 // Use data attribute for date (most reliable)
                 const rowDate = row.dataset.periodDate;
                 const rowAmount = row.dataset.interestAmount;
                 
-                console.log('Checking row: date=', rowDate, 'amount=', rowAmount);
-                
                 if (rowDate === targetDate) {
                     const amount = parseFloat(rowAmount);
-                    console.log('Found match! Returning amount:', amount);
                     return amount;
                 }
             }
             
-            console.log('No match found for date:', targetDate);
             return null;
         }
         
@@ -1367,14 +1337,12 @@
                         });
                     } else if (amountInput.value.trim() !== '') {
                         // Highlight invalid amounts too
-                        console.warn(`Invalid amount for payment ${id}: "${amountInput.value}"`);
                         amountInput.style.border = '2px solid #dc3545';
                         amountInput.style.backgroundColor = '#f8d7da';
                         amountInput.title = `Invalid amount: "${amountInput.value}"`;
                     }
                 } else if (amountInput && dateInput && (amountInput.value.trim() !== '' || dateInput.value.trim() !== '')) {
                     // Show warning for incomplete payments (has some data but not complete)
-                    console.warn(`Incomplete payment data for payment ${id}: amount="${amountInput?.value}", date="${dateInput?.value}"`);
                     
                     if (!amountInput.value.trim()) {
                         amountInput.style.border = '2px solid #ffc107';
@@ -1394,7 +1362,6 @@
                 try {
                     return a.date - b.date;
                 } catch (e) {
-                    console.warn('Error sorting payments by date:', e);
                     return 0; // Keep original order if sorting fails
                 }
             });
@@ -1685,7 +1652,6 @@
                 
                 return billInfo;
             } catch (error) {
-                console.error('Error parsing CSV:', error);
                 return null;
             }
         }
@@ -1783,7 +1749,6 @@
                                 // Ensure results are displayed first
                                 const resultsContent = document.getElementById('results1-content');
                                 if (!resultsContent || !resultsContent.innerHTML.includes('results-table')) {
-                                    console.log('Results table not ready, triggering display...');
                                     displayResults1();
                                 }
                                 
@@ -1795,7 +1760,6 @@
                             }, 500);
                         }
                     } catch (error) {
-                        console.log('Could not extract interest data for comparison:', error.message);
                     }
                 };
                 reader.readAsText(csvFileInput.files[0]);
@@ -2775,7 +2739,6 @@
                     updatePaymentInTimeline(paymentKey, field, newValue);
                 } else {
                     // Invalid date - don't update anything, just show validation error
-                    console.warn(`Invalid date format for payment ${paymentKey}: "${newValue}". Payment not updated.`);
                     return;
                 }
             }
@@ -3647,9 +3610,7 @@
             const results = [];
             const table = document.querySelector('#results1-content .results-table tbody');
             
-            console.log('getCalculatedInterestCharges: table found?', !!table);
             if (!table) {
-                console.log('Table not found with selector: #results1-content .results-table tbody');
                 return results;
             }
             
@@ -3662,15 +3623,12 @@
             const hasActualColumn = actualHeader && actualHeader.style.display !== 'none';
             
             const offset = hasCheckboxColumn ? 1 : 0;
-            console.log('hasCheckboxColumn:', hasCheckboxColumn, 'hasActualColumn:', hasActualColumn, 'offset:', offset);
             
             const rows = table.querySelectorAll('tr:not(.insert-form-row)');
-            console.log('Found', rows.length, 'rows to process');
             
             rows.forEach((row, index) => {
                 // Only process interest rows
                 if (!row.classList.contains('interest-row')) {
-                    console.log(`Row ${index}: Not an interest row, skipping`);
                     return;
                 }
                 
@@ -3680,7 +3638,6 @@
                 
                 if (periodDate && interestAmount) {
                     const amount = parseFloat(interestAmount);
-                    console.log(`Row ${index}: Using data attributes - date="${periodDate}", amount=${amount}`);
                     
                     if (!isNaN(amount) && amount > 0) {
                         results.push({
@@ -3688,14 +3645,11 @@
                             amount: amount,
                             type: 'calculated'
                         });
-                        console.log(`Row ${index}: Added to results from data attributes`);
                     }
                 } else {
-                    console.log(`Row ${index}: Missing data attributes (periodDate="${periodDate}", interestAmount="${interestAmount}")`);
                 }
             });
             
-            console.log('getCalculatedInterestCharges returning', results.length, 'results');
             return results;
         }
         
@@ -3931,14 +3885,12 @@
         }
         
         function integrateDiscrepancyData(actualCharges) {
-            console.log('integrateDiscrepancyData called with', actualCharges.length, 'charges');
             
             // Show the actual column in the results table
             showActualColumn();
             
             // Get calculated charges from the current results
             const calculatedCharges = getCalculatedInterestCharges();
-            console.log('Found', calculatedCharges.length, 'calculated charges');
             
             if (calculatedCharges.length === 0) {
                 showDiscrepancyStatus('⚠️ No calculated interest charges found. Please run calculations first.', 'warning');
@@ -3947,7 +3899,6 @@
             
             // Compare and update the table
             const comparison = compareInterestCharges(actualCharges, calculatedCharges);
-            console.log('Comparison results:', comparison);
             
             updateResultsTableWithActual(actualCharges, comparison);
             showDiscrepancySummary(comparison);
@@ -4000,11 +3951,9 @@
             actualCharges.forEach(charge => {
                 actualMap.set(charge.date, charge.amount);
             });
-            console.log('Actual map created with dates:', Array.from(actualMap.keys()));
             
             // Update each row with actual data and comparison indicators
             const rows = document.querySelectorAll('.results-table tbody tr');
-            console.log('Found', rows.length, 'rows to update');
             
             let updatedCount = 0;
             rows.forEach(row => {
@@ -4043,7 +3992,6 @@
                 }
                 
                 const actualAmount = actualMap.get(date);
-                console.log('Row date:', date, 'actualAmount:', actualAmount);
                 
                 if (actualAmount !== undefined) {
                     const actualSpan = actualCell.querySelector('.actual-amount');
@@ -4052,9 +4000,7 @@
                     if (actualSpan) {
                         actualSpan.textContent = `$${actualAmount.toFixed(2)}`;
                         updatedCount++;
-                        console.log('Updated row with date', date, 'to amount', actualAmount);
                     } else {
-                        console.log('No .actual-amount span found in actualCell');
                     }
                     
                     // Find the comparison result for this date
@@ -4088,7 +4034,6 @@
                 }
             });
             
-            console.log('Updated', updatedCount, 'rows with actual data');
         }
         
         function showDiscrepancySummary(comparison) {
