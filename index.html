@@ -2457,8 +2457,14 @@
                     }
 
                     let dateDisplayHtml;
+                    
+                    // Check if current date differs from original date (from payment input)
+                    const currentDate = result.date;
+                    const originalPaymentDate = createdAtInfo && createdAtInfo.originalDate ? createdAtInfo.originalDate : result.originalDate;
+                    const hasOriginalDateDiff = originalPaymentDate && currentDate !== originalPaymentDate;
+                    
                     if (hasDateModification) {
-                        // Show both original and modified dates
+                        // Show both original and modified dates (from modification tracking)
                         dateDisplayHtml = `
                             <div style="margin-bottom: 5px;">
                                 <input type="text" 
@@ -2474,7 +2480,16 @@
                             ${createdAtDisplay}
                         `;
                     } else {
-                        // Show just the editable date input
+                        // Show editable date input
+                        let originalDateInfo = '';
+                        if (hasOriginalDateDiff) {
+                            originalDateInfo = `
+                                <div style="font-size: 11px; color: #6c757d; font-style: italic; margin-top: 3px;">
+                                    Original: ${originalPaymentDate}
+                                </div>
+                            `;
+                        }
+                        
                         dateDisplayHtml = `
                             <input type="text" 
                                    class="editable-input payment-date-edit" 
@@ -2482,6 +2497,7 @@
                                    placeholder="MM/DD/YYYY"
                                    data-payment-key="${paymentKey}"
                                    onchange="updatePaymentFromTable('${paymentKey}', 'date', this.value)">
+                            ${originalDateInfo}
                             ${createdAtDisplay}
                         `;
                     }
