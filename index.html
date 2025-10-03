@@ -125,6 +125,9 @@
         .results-table th {
             background-color: #f2f2f2;
             font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
         
         .results-table tr:nth-child(even) {
@@ -2906,8 +2909,13 @@
             
             if (!targetRow) return;
             
-            // Get the date from the target row (2nd column)
-            const targetDateCell = targetRow.querySelector('td:nth-child(2)');
+            // Check if zero-out checkbox column is present (affects cell indices)
+            const checkboxHeader = document.getElementById('zeroOutCheckboxHeader');
+            const hasCheckboxColumn = checkboxHeader && checkboxHeader.style.display !== 'none';
+            const dateColumnIndex = hasCheckboxColumn ? 2 : 1; // Date is 3rd column with checkbox, 2nd without
+            
+            // Get the date from the target row
+            const targetDateCell = targetRow.querySelector(`td:nth-child(${dateColumnIndex + 1})`);
             let defaultDate = formatDate(new Date()); // fallback to today
             
             if (targetDateCell) {
