@@ -2447,8 +2447,11 @@
                     
                     // Get created_at info if available
                     const createdAtInfo = getPaymentCreatedAtInfo(result.id);
+                    const isZeroOutCredit = result.paymentType === 'zero_out_credit';
                     let createdAtDisplay = '';
-                    if (createdAtInfo && (createdAtInfo.createdAt || createdAtInfo.originalDate)) {
+                    
+                    // Don't show the created_at section for zero-out credits
+                    if (!isZeroOutCredit && createdAtInfo && (createdAtInfo.createdAt || createdAtInfo.originalDate)) {
                         let buttonsHtml = '';
                         if (createdAtInfo.createdAt) {
                             buttonsHtml += `
@@ -2482,7 +2485,7 @@
                     // Check if current date differs from original date (from payment input)
                     const currentDate = result.date;
                     const originalPaymentDate = createdAtInfo && createdAtInfo.originalDate ? createdAtInfo.originalDate : result.originalDate;
-                    const hasOriginalDateDiff = originalPaymentDate && currentDate !== originalPaymentDate;
+                    const hasOriginalDateDiff = !isZeroOutCredit && originalPaymentDate && currentDate !== originalPaymentDate;
                     
                     if (hasDateModification) {
                         // Show both original and modified dates (from modification tracking)
