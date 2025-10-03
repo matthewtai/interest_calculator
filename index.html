@@ -2909,13 +2909,9 @@
             
             if (!targetRow) return;
             
-            // Check if zero-out checkbox column is present (affects cell indices)
-            const checkboxHeader = document.getElementById('zeroOutCheckboxHeader');
-            const hasCheckboxColumn = checkboxHeader && checkboxHeader.style.display !== 'none';
-            const dateColumnIndex = hasCheckboxColumn ? 2 : 1; // Date is 3rd column with checkbox, 2nd without
-            
-            // Get the date from the target row
-            const targetDateCell = targetRow.querySelector(`td:nth-child(${dateColumnIndex + 1})`);
+            // The date is always in the 3rd column (after checkbox and period columns)
+            // Note: All rows have the checkbox cell, it's just hidden by default
+            const targetDateCell = targetRow.querySelector('td:nth-child(3)');
             let defaultDate = formatDate(new Date()); // fallback to today
             
             if (targetDateCell) {
@@ -2941,6 +2937,7 @@
             insertRow.id = 'insert-form-row';
             
             insertRow.innerHTML = `
+                <td class="zero-out-checkbox-cell" style="display: none;"></td>
                 <td>
                     <input type="text" class="insert-form-input" id="insert-description" placeholder="Description">
                 </td>
